@@ -1,5 +1,6 @@
 import os
 import redis
+from redis import ConnectionPool
 from flask import Flask
 from app.models.user import User
 from .config import DevelopmentConfig, ProductionConfig, TestingConfig
@@ -34,15 +35,14 @@ def create_app(config_object=None):
     def load_user(user_id):
         return db.session.get(User, int(user_id))
 
-    # Настройка Redis
-    redis_client = redis.from_url(
+    pool = ConnectionPool.from_url(
         app.config['REDIS_URL'],
+        max_connections=20,
         decode_responses=True,
         socket_connect_timeout=5,
-        socket_keepalive=True,
-        health_check_interval=30,
-        connection_pool_kwargs={'max_connections': 20}
+        socket_keepalive=True
     )
+    redis_client = redis.Redis(connection_pool=pool)
     app.redis_client = redis_client
 
     # Создание контейнера зависимостей
