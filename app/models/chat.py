@@ -9,3 +9,11 @@ class Chat(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     description = db.Column(db.String(200), nullable=True)
+
+    messages = db.relationship('Message', backref='chat', cascade='all, delete-orphan', lazy='select')
+    participants = db.relationship('ChatParticipant', backref='chat', cascade='all, delete-orphan', lazy='select')
+    last_reads = db.relationship('LastRead', backref='chat', cascade='all, delete-orphan', lazy='select')
+
+    __table_args__ = (
+        db.Index('ix_chat_type', 'type'),
+    )

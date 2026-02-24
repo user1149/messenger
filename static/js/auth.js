@@ -37,17 +37,22 @@ class Auth {
 
     validateField(field, value) {
         if (field === 'login') {
-            if (value.length < 3) return 'Слишком короткий логин/email';
-        } else if (field === 'password') {
-            if (value.length < 4) return 'Пароль должен быть не менее 4 символов';
-        } else if (field === 'username') {
-            if (value.length < 3 || value.length > 20) return 'Имя от 3 до 20 символов';
-        } else if (field === 'email') {
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailRegex.test(value)) return 'Некорректный email';
-        } else if (field === 'password_confirm') {
+            return !value ? 'Поле не может быть пусто' : null;
+        }
+        if (field === 'password') {
+            return !value ? 'Поле не может быть пусто' : null;
+        }
+        if (field === 'username') {
+            return !value ? 'Поле не может быть пусто' : null;
+        }
+        if (field === 'email') {
+            if (!value) return 'Поле не может быть пусто';
+            const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+            return !emailRegex.test(value) ? 'Неверный формат email' : null;
+        }
+        if (field === 'password_confirm') {
             const password = this.app.ui.elements.authPassword.value;
-            if (value !== password) return 'Пароли не совпадают';
+            return value !== password ? 'Пароли не совпадают' : null;
         }
         return null;
     }
@@ -57,12 +62,7 @@ class Auth {
         if (this.isLoginMode) {
             const login = elements.authLogin.value.trim();
             const password = elements.authPassword.value;
-            let error = this.validateField('login', login);
-            if (error) {
-                this.showError(error);
-                return false;
-            }
-            error = this.validateField('password', password);
+            let error = this.validateField('login', login) || this.validateField('password', password);
             if (error) {
                 this.showError(error);
                 return false;
@@ -72,22 +72,11 @@ class Auth {
             const username = elements.authUsername.value.trim();
             const password = elements.authPassword.value;
             const passwordConfirm = elements.authPasswordConfirm.value;
-            let error = this.validateField('email', email);
-            if (error) {
-                this.showError(error);
-                return false;
-            }
-            error = this.validateField('username', username);
-            if (error) {
-                this.showError(error);
-                return false;
-            }
-            error = this.validateField('password', password);
-            if (error) {
-                this.showError(error);
-                return false;
-            }
-            error = this.validateField('password_confirm', passwordConfirm);
+            
+            let error = this.validateField('email', email) || 
+                       this.validateField('username', username) ||
+                       this.validateField('password', password) ||
+                       this.validateField('password_confirm', passwordConfirm);
             if (error) {
                 this.showError(error);
                 return false;

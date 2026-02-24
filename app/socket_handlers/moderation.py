@@ -1,6 +1,7 @@
 from flask_socketio import emit
 from flask_login import current_user
 from app.exceptions.chat_errors import AccessDeniedError, MessageNotFoundError, MessageEditTimeExpiredError
+from app.socket_handlers.presence import authenticated_only
 import logging
 
 logger = logging.getLogger(__name__)
@@ -11,6 +12,7 @@ def register_moderation_handlers(socketio, container):
     chat_repo = container.chat_repo
 
     @socketio.on('delete_message')
+    @authenticated_only
     def handle_delete_message(data):
         chat_id = data.get('chat_id', '').strip()
         try:
@@ -38,6 +40,7 @@ def register_moderation_handlers(socketio, container):
             emit('error', {'message': 'Internal error'})
 
     @socketio.on('edit_message')
+    @authenticated_only
     def handle_edit_message(data):
         chat_id = data.get('chat_id', '').strip()
         try:

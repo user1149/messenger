@@ -47,6 +47,9 @@ def register_messaging_handlers(socketio, container):
             emit('error', {'message': 'Rate limit'})
             return
         
+        if not data:
+            emit('error', {'message': 'Invalid request'})
+            return
         chat_id = data.get('chat_id', '').strip()
         text = data.get('text', '').strip()
         

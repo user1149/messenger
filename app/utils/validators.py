@@ -1,5 +1,9 @@
 import re
+import html
 from app.exceptions.auth_errors import ValidationError
+
+def escape_html(text: str) -> str:
+    return html.escape(text)
 
 def validate_email(email: str):
     pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'

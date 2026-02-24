@@ -7,7 +7,8 @@ from app.exceptions.chat_errors import (
     MessageNotFoundError,
     MessageEditTimeExpiredError
 )
-from app.utils.validators import validate_message_text
+from app.utils.validators import validate_message_text, escape_html
+from app.utils.audit_log import log_message_deleted, log_message_edited
 
 class MessageService:
     def __init__(self, user_repo, message_repo, last_read_repo, chat_repo, redis_client, config):
@@ -29,10 +30,10 @@ class MessageService:
         if not self._check_user_in_chat(user_id, chat_id):
             raise AccessDeniedError("You are not in this chat")
 
-        validate_message_text(text)  # может бросить ValidationError
+        validate_message_text(text)
 
-        message = self.message_repo.create(chat_id, user_id, text)
-        # Коммит
+        safe_text = escape_html(text)
+        message = self.message_repo.create(chat_id, user_id, safe_text)
         self.message_repo.session.commit()
 
         user = self.user_repo.get_by_id(user_id)
@@ -60,8 +61,9 @@ class MessageService:
             'chat_id': chat_id,
             'is_deleted': m.is_deleted,
             'edited': m.edited,
+            'edited_at': m.edited_at.isoformat() if m.edited_at else None,
             'user_id': m.user_id
-        } for m in reversed(messages)]
+        } for m in messages]
 
     def mark_read(self, user_id: int, chat_id: str):
         if not self._check_user_in_chat(user_id, chat_id):
@@ -72,7 +74,6 @@ class MessageService:
             self.last_read_repo.session.commit()
 
     def delete_message(self, user_id: int, message_id: int, chat_id: str) -> Dict:
-        # Проверка доступа
         if not self._check_user_in_chat(user_id, chat_id):
             raise AccessDeniedError()
 
@@ -83,7 +84,6 @@ class MessageService:
         if message.user_id != user_id:
             raise AccessDeniedError("Cannot delete another user's message")
 
-        # Проверка времени (5 минут)
         if datetime.utcnow() - message.timestamp > timedelta(minutes=5):
             raise MessageEditTimeExpiredError("Cannot delete messages older than 5 minutes")
 
@@ -91,6 +91,9 @@ class MessageService:
         if not success:
             raise MessageNotFoundError()
         self.message_repo.session.commit()
+
+        user = self.user_repo.get_by_id(user_id)
+        log_message_deleted(user_id, message_id, chat_id, user.username if user else "unknown")
 
         return {"chat_id": chat_id, "message_id": message_id}
 
@@ -110,17 +113,21 @@ class MessageService:
         if datetime.utcnow() - message.timestamp > timedelta(minutes=5):
             raise MessageEditTimeExpiredError("Cannot edit messages older than 5 minutes")
 
-        edited = self.message_repo.edit_message(message_id, new_text)
+        safe_text = escape_html(new_text)
+        edited = self.message_repo.edit_message(message_id, safe_text)
         if not edited:
             raise MessageNotFoundError()
         self.message_repo.session.commit()
 
         user = self.user_repo.get_by_id(user_id)
+        log_message_edited(user_id, message_id, chat_id, user.username if user else "unknown")
+        
         return {
             'id': edited.id,
             'nickname': user.username,
             'text': edited.text,
             'timestamp': edited.timestamp.isoformat(),
+            'edited_at': edited.edited_at.isoformat() if edited.edited_at else None,
             'chat_id': chat_id,
             'user_id': user_id,
             'is_deleted': False,

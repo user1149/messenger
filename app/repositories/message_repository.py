@@ -1,4 +1,5 @@
 from typing import Optional, List, Dict
+from datetime import datetime
 from sqlalchemy.orm import joinedload
 from sqlalchemy import func
 from .base import BaseRepository
@@ -27,34 +28,21 @@ class MessageRepository(BaseRepository):
         if not chat_ids:
             return {}
         
-        last_reads = self.session.query(LastRead.chat_id, LastRead.last_message_id).filter(
-            LastRead.user_id == user_id,
-            LastRead.chat_id.in_(chat_ids)
-        ).all()
-        
-        last_read_dict = {chat_id: last_id for chat_id, last_id in last_reads}
-        
+        from sqlalchemy import case
         results = self.session.query(
             Message.chat_id,
-            func.count(Message.id)
+            func.sum(case((Message.id > func.coalesce(LastRead.last_message_id, 0), 1), else_=0)).label('unread_count')
+        ).outerjoin(
+            LastRead,
+            (LastRead.user_id == user_id) & (LastRead.chat_id == Message.chat_id)
         ).filter(
             Message.chat_id.in_(chat_ids),
             Message.is_deleted == False
         ).group_by(Message.chat_id).all()
         
-        unread_counts = {}
-        for chat_id, total_count in results:
-            last_id = last_read_dict.get(chat_id, 0)
-            unread = self.session.query(func.count(Message.id)).filter(
-                Message.chat_id == chat_id,
-                Message.id > last_id,
-                Message.is_deleted == False
-            ).scalar()
-            unread_counts[chat_id] = unread or 0
-        
-        for chat_id in chat_ids:
-            if chat_id not in unread_counts:
-                unread_counts[chat_id] = 0
+        unread_counts = {chat_id: 0 for chat_id in chat_ids}
+        for chat_id, unread_count in results:
+            unread_counts[chat_id] = unread_count or 0
         
         return unread_counts
 
@@ -72,5 +60,6 @@ class MessageRepository(BaseRepository):
             return None
         message.text = new_text
         message.edited = True
+        message.edited_at = datetime.utcnow()
         self.session.flush()
         return message

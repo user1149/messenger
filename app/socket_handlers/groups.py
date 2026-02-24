@@ -1,6 +1,7 @@
 from flask_socketio import emit, join_room
 from flask_login import current_user
 from app.utils.rate_limit import check_rate_limit
+from app.socket_handlers.presence import authenticated_only
 import logging
 
 logger = logging.getLogger(__name__)
@@ -12,6 +13,7 @@ def register_groups_handlers(socketio, container):
     chat_repo = container.chat_repo
 
     @socketio.on('create_private_chat')
+    @authenticated_only
     def handle_create_private_chat(data):
         if check_rate_limit(current_user.username, 'create_private_chat', redis_client):
             emit('error', {'message': 'Rate limit'})
@@ -37,13 +39,14 @@ def register_groups_handlers(socketio, container):
             emit('error', {'message': str(e)})
 
     @socketio.on('create_group')
+    @authenticated_only
     def handle_create_group(data):
         if check_rate_limit(current_user.username, 'create_private_chat', redis_client):
             emit('error', {'message': 'Rate limit'})
             return
         
-        name = data.get('name', '').strip()
-        if not name:
+        name = data.get('name', '').strip() if data else ''
+        if not name or not name.strip() or len(name) > 100:
             emit('error', {'message': 'Invalid group name'})
             return
             
@@ -69,6 +72,7 @@ def register_groups_handlers(socketio, container):
             emit('error', {'message': str(e)})
 
     @socketio.on('add_to_group')
+    @authenticated_only
     def handle_add_to_group(data):
         chat_id = data.get('chat_id', '').strip()
         try:
@@ -99,6 +103,7 @@ def register_groups_handlers(socketio, container):
             emit('error', {'message': str(e)})
 
     @socketio.on('remove_from_group')
+    @authenticated_only
     def handle_remove_from_group(data):
         chat_id = data.get('chat_id', '').strip()
         try:
@@ -127,6 +132,7 @@ def register_groups_handlers(socketio, container):
             emit('error', {'message': str(e)})
 
     @socketio.on('get_group_info')
+    @authenticated_only
     def handle_get_group_info(data):
         chat_id = data.get('chat_id')
         try:
@@ -140,6 +146,7 @@ def register_groups_handlers(socketio, container):
             emit('error', {'message': str(e)})
 
     @socketio.on('leave_group')
+    @authenticated_only
     def handle_leave_group(data):
         chat_id = data.get('chat_id')
         try:

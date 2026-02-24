@@ -1,7 +1,6 @@
 from typing import Optional, Dict
 from datetime import datetime, timedelta
 import secrets
-import re
 from werkzeug.security import generate_password_hash, check_password_hash
 from app.exceptions.auth_errors import (
     InvalidCredentialsError,
@@ -13,6 +12,7 @@ from app.exceptions.auth_errors import (
 )
 from app.repositories.user_repository import UserRepository
 from app.utils.validators import validate_email, validate_username, validate_password
+from app.utils.audit_log import log_user_registered, log_user_login
 
 class AuthService:
     def __init__(self, user_repo: UserRepository, redis_client, config, email_task):
@@ -50,13 +50,17 @@ class AuthService:
 
         token = self._generate_confirmation_token(user)
         self.email_task.send_confirmation(user.email, user.username, token)
+        
+        log_user_registered(user.id, user.username, user.email)
 
         return {"id": user.id, "username": user.username, "email": user.email}
 
     def _generate_confirmation_token(self, user):
         token = secrets.token_urlsafe(32)
-        user.confirmation_token = token
+        token_hash = generate_password_hash(token, method='pbkdf2:sha256')
+        user.confirmation_token = token_hash
         user.token_expiration = datetime.utcnow() + timedelta(seconds=self.config['CONFIRMATION_TOKEN_EXPIRATION'])
+        self.redis.setex(f"confirm_token:{token}", self.config['CONFIRMATION_TOKEN_EXPIRATION'], str(user.id))
         self.user_repo.session.commit()
         return token
 
@@ -82,19 +86,27 @@ class AuthService:
         if not user.confirmed:
             raise UserNotFoundError("Email not confirmed", not_confirmed=True, email=user.email)
 
+        log_user_login(user.id, user.username, ip or "unknown")
+
         return {"id": user.id, "username": user.username, "confirmed": user.confirmed}
 
     def confirm_user(self, token: str) -> Dict:
-        user = self.user_repo.get_by_confirmation_token(token)
+        user_id = self.redis.get(f"confirm_token:{token}")
+        if not user_id:
+            raise UserNotFoundError("Invalid or expired token")
+        
+        from app.models.user import User
+        user = self.user_repo.get_by_id(int(user_id))
         if not user:
-            raise UserNotFoundError("Invalid token")
-        if user.token_expiration < datetime.utcnow():
-            raise ValidationError("Token expired")
+            raise UserNotFoundError("User not found")
+        
         user.confirmed = True
         user.confirmed_at = datetime.utcnow()
         user.confirmation_token = None
         user.token_expiration = None
         self.user_repo.session.commit()
+        self.redis.delete(f"confirm_token:{token}")
+        
         return {"id": user.id, "username": user.username}
 
     def resend_confirmation(self, email: str) -> Dict:

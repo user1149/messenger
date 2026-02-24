@@ -78,7 +78,8 @@ class SocketManager {
 
     handleChatHistory(data) {
         clearTimeout(this.app.chat.historyTimeout);
-        if (!this.app.chat.isLoadingHistory || this.app.chat.currentChatId !== data.chat_id) return;
+        const currentChatId = this.app.chat.currentChatId;
+        if (!this.app.chat.isLoadingHistory || currentChatId !== data.chat_id) return;
         this.app.chat.isLoadingHistory = false;
 
         const elements = this.app.ui.elements;
@@ -93,15 +94,15 @@ class SocketManager {
 
         if (data.messages.length > 0) {
             const lastMsg = data.messages[data.messages.length - 1];
-            if (this.app.chat.chatsData[this.app.chat.currentChatId]) {
+            if (this.app.chat.chatsData[currentChatId]) {
                 const lastMessageText = lastMsg.is_deleted ? 'Сообщение удалено' : lastMsg.text;
-                this.app.chat.chatsData[this.app.chat.currentChatId].lastMessage = lastMessageText;
-                this.app.chat.chatsData[this.app.chat.currentChatId].lastTime = lastMsg.timestamp;
+                this.app.chat.chatsData[currentChatId].lastMessage = lastMessageText;
+                this.app.chat.chatsData[currentChatId].lastTime = lastMsg.timestamp;
             }
             this.app.chat.renderChatsList();
         }
 
-        const chat = this.app.chat.chatsData[this.app.chat.currentChatId];
+        const chat = this.app.chat.chatsData[currentChatId];
         if (chat) {
             if (chat.type === 'private') {
                 this.app.chat.currentChatPartner = chat.name;

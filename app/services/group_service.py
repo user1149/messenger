@@ -19,10 +19,9 @@ class GroupService:
         self.config = config
 
     def create_group(self, name: str, description: str, creator_id: int, member_ids: List[int]) -> Dict:
-        if not name or len(name) > 100:
+        if not name or not name.strip() or len(name.strip()) > 100:
             raise ValidationError("Invalid group name")
 
-        # Добавляем создателя, если его нет
         if creator_id not in member_ids:
             member_ids.append(creator_id)
 
@@ -36,8 +35,7 @@ class GroupService:
 
         chat = self.chat_repo.create_group(name, creator_id, description)
         for user_id in member_ids:
-            if user_id != creator_id:
-                self.chat_repo.add_participant(user_id, chat.id)
+            self.chat_repo.add_participant(user_id, chat.id)
 
         self.chat_repo.session.commit()
 

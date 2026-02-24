@@ -6,6 +6,3 @@ def is_valid_uuid(val):
         return True
     except ValueError:
         return False
-
-def format_time(iso_string):
-    pass

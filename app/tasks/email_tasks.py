@@ -11,7 +11,11 @@ class EmailTask:
     def _send_async(self, app, to_email, username, token):
         with app.app_context():
             try:
-                confirm_url = app.config.get('BASE_URL', 'http://localhost:1488') + f'/auth/confirm/{token}'
+                base_url = app.config.get('BASE_URL')
+                if not base_url:
+                    app.logger.error("BASE_URL not configured")
+                    return
+                confirm_url = base_url + f'/auth/confirm/{token}'
                 html = f'''
                 <h2>Подтверждение регистрации</h2>
                 <p>Здравствуйте, {username}!</p>
