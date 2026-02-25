@@ -34,7 +34,7 @@ def register_messaging_handlers(socketio, container):
             counts = chat_service.get_unread_counts(current_user.id)
             emit('unread_counts', counts)
         except AccessDeniedError:
-            emit('error', {'message': 'Оксес запрещен'})
+            emit('error', {'message': 'Доступ запрещен'})
         except ChatNotFoundError:
             emit('error', {'message': 'Чат не найден'})
         except Exception as e:

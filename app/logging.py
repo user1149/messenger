@@ -1,6 +1,28 @@
 import logging
+import os
+from logging.handlers import RotatingFileHandler
 
-# Единый модуль логирования для событий приложения (аудит)
+def init_logging(app):
+    if not app.debug and not app.testing:
+        if not os.path.exists('logs'):
+            os.mkdir('logs')
+        
+        file_handler = RotatingFileHandler('logs/messenger.log', maxBytes=10240000, backupCount=10)
+        file_handler.setFormatter(logging.Formatter(
+            '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
+        ))
+        file_handler.setLevel(logging.INFO)
+        app.logger.addHandler(file_handler)
+        
+        audit_logger = logging.getLogger('audit')
+        audit_handler = RotatingFileHandler('logs/audit.log', maxBytes=10240000, backupCount=10)
+        audit_handler.setFormatter(logging.Formatter('%(asctime)s - %(message)s'))
+        audit_handler.setLevel(logging.INFO)
+        audit_logger.addHandler(audit_handler)
+        audit_logger.setLevel(logging.INFO)
+    
+    app.logger.setLevel(logging.INFO)
+
 audit_logger = logging.getLogger('audit')
 
 def log_message_deleted(user_id: int, message_id: int, chat_id: str, username: str):

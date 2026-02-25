@@ -1,21 +1,44 @@
+"""Точка входа приложения для запуска сервера."""
 import argparse
 import eventlet
+
 eventlet.monkey_patch()
 
 from app import create_app
 from app.extensions import socketio
 
-app = create_app()
-
 
 def parse_args():
-    p = argparse.ArgumentParser(description='Run messanger app')
-    p.add_argument('--debug', '-d', action='store_true', help='Включить режим отладки')
-    p.add_argument('--host', default='127.0.0.1', help='Хост для запуска (по умолчанию 127.0.0.1)')
-    p.add_argument('--port', type=int, default=1488, help='Порт для запуска (по умолчанию 1488)')
-    return p.parse_args()
+    """Парсинг командной строки аргументов."""
+    import os
+    parser = argparse.ArgumentParser(description="Run messenger app")
+    parser.add_argument(
+        "--debug",
+        "-d",
+        action="store_true",
+        help="Enable debug mode"
+    )
+    parser.add_argument(
+        "--host",
+        default=os.getenv("HOST", "127.0.0.1"),
+        help="Host to run on"
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=int(os.getenv("PORT", "5000")),
+        help="Port to run on"
+    )
+    return parser.parse_args()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
+    app = create_app()
     args = parse_args()
-    socketio.run(app, debug=args.debug, host=args.host, port=args.port)
+    socketio.run(
+        app,
+        debug=args.debug,
+        host=args.host,
+        port=args.port
+    )
+

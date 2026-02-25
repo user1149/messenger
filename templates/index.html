@@ -22,6 +22,7 @@
             <div class="auth-card">
                 <h3 id="auth-title">Вход</h3>
                 <div id="auth-error" class="error-message hidden"></div>
+                <input type="hidden" id="csrf-token" value="{{ csrf_token() }}">
 
                 <div class="input-group" id="login-group">
                     <i class="fas fa-user"></i>

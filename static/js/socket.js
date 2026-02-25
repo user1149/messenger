@@ -6,32 +6,138 @@ class SocketManager {
     }
 
     connect() {
-        this.socket = io();
+        this.socket = io({
+            reconnection: true,
+            reconnectionDelay: 1000,
+            reconnectionDelayMax: 5000,
+            reconnectionAttempts: 5,
+            transports: ['websocket', 'polling']
+        });
         this.setupHandlers();
     }
 
     setupHandlers() {
-        this.socket.on('chat_list', this.handleChatList.bind(this));
-        this.socket.on('unread_counts', this.handleUnreadCounts.bind(this));
-        this.socket.on('chat_created', this.handleChatCreated.bind(this));
-        this.socket.on('chat_history', this.handleChatHistory.bind(this));
-        this.socket.on('new_message', this.handleNewMessage.bind(this));
-        this.socket.on('user_online', this.handleUserOnline.bind(this));
-        this.socket.on('user_offline', this.handleUserOffline.bind(this));
-        this.socket.on('typing', this.handleTypingIndicator.bind(this));
+        this.socket.on('chat_list', (data) => {
+            try {
+                this.handleChatList(data);
+            } catch (e) {
+                console.error('Error in chat_list handler:', e);
+            }
+        });
+        this.socket.on('unread_counts', (data) => {
+            try {
+                this.handleUnreadCounts(data);
+            } catch (e) {
+                console.error('Error in unread_counts handler:', e);
+            }
+        });
+        this.socket.on('chat_created', (data) => {
+            try {
+                this.handleChatCreated(data);
+            } catch (e) {
+                console.error('Error in chat_created handler:', e);
+            }
+        });
+        this.socket.on('chat_history', (data) => {
+            try {
+                this.handleChatHistory(data);
+            } catch (e) {
+                console.error('Error in chat_history handler:', e);
+            }
+        });
+        this.socket.on('new_message', (data) => {
+            try {
+                this.handleNewMessage(data);
+            } catch (e) {
+                console.error('Error in new_message handler:', e);
+            }
+        });
+        this.socket.on('user_online', (data) => {
+            try {
+                this.handleUserOnline(data);
+            } catch (e) {
+                console.error('Error in user_online handler:', e);
+            }
+        });
+        this.socket.on('user_offline', (data) => {
+            try {
+                this.handleUserOffline(data);
+            } catch (e) {
+                console.error('Error in user_offline handler:', e);
+            }
+        });
+        this.socket.on('typing', (data) => {
+            try {
+                this.handleTypingIndicator(data);
+            } catch (e) {
+                console.error('Error in typing handler:', e);
+            }
+        });
         this.socket.on('error', (data) => {
-            this.app.ui.showNotification('Ошибка: ' + data.message);
+            console.error('Socket error:', data);
+            this.app.ui.showNotification('Ошибка: ' + (data?.message || 'Неизвестная ошибка'));
             this.app.chat.groupCreationInProgress = false;
         });
-        this.socket.on('disconnect', this.handleDisconnect.bind(this));
-        this.socket.on('connect', this.handleReconnect.bind(this));
-        this.socket.on('group_created', this.handleGroupCreated.bind(this));
-        this.socket.on('group_info', this.handleGroupInfo.bind(this));
-        this.socket.on('group_info_updated', this.handleGroupInfoUpdated.bind(this));
-        this.socket.on('removed_from_group', this.handleRemovedFromGroup.bind(this));
-        this.socket.on('left_group', this.handleLeftGroup.bind(this));
-        this.socket.on('message_deleted', this.handleMessageDeleted.bind(this));
-        this.socket.on('message_edited', this.handleMessageEdited.bind(this));
+        this.socket.on('disconnect', (reason) => {
+            console.warn('Socket disconnected:', reason);
+            this.handleDisconnect();
+        });
+        this.socket.on('connect', (data) => {
+            try {
+                this.handleReconnect();
+            } catch (e) {
+                console.error('Error in connect handler:', e);
+            }
+        });
+        this.socket.on('group_created', (data) => {
+            try {
+                this.handleGroupCreated(data);
+            } catch (e) {
+                console.error('Error in group_created handler:', e);
+            }
+        });
+        this.socket.on('group_info', (data) => {
+            try {
+                this.handleGroupInfo(data);
+            } catch (e) {
+                console.error('Error in group_info handler:', e);
+            }
+        });
+        this.socket.on('group_info_updated', (data) => {
+            try {
+                this.handleGroupInfoUpdated(data);
+            } catch (e) {
+                console.error('Error in group_info_updated handler:', e);
+            }
+        });
+        this.socket.on('removed_from_group', (data) => {
+            try {
+                this.handleRemovedFromGroup(data);
+            } catch (e) {
+                console.error('Error in removed_from_group handler:', e);
+            }
+        });
+        this.socket.on('left_group', (data) => {
+            try {
+                this.handleLeftGroup(data);
+            } catch (e) {
+                console.error('Error in left_group handler:', e);
+            }
+        });
+        this.socket.on('message_deleted', (data) => {
+            try {
+                this.handleMessageDeleted(data);
+            } catch (e) {
+                console.error('Error in message_deleted handler:', e);
+            }
+        });
+        this.socket.on('message_edited', (data) => {
+            try {
+                this.handleMessageEdited(data);
+            } catch (e) {
+                console.error('Error in message_edited handler:', e);
+            }
+        });
     }
 
     handleChatList(chats) {

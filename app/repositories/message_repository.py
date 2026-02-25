@@ -24,9 +24,16 @@ class MessageRepository(BaseRepository):
             joinedload(Message.user)
         ).order_by(Message.timestamp.desc()).limit(limit).offset(offset).all()
 
-    def count_unread_for_user(self, user_id: int, chat_ids: List[str]) -> Dict[str, int]:
+    def count_unread_for_user(self, user_id: int, chat_ids: list, redis_client=None) -> dict:
         if not chat_ids:
             return {}
+        
+        cache_key = f"unread:{user_id}"
+        if redis_client:
+            cached = redis_client.get(cache_key)
+            if cached:
+                import json
+                return json.loads(cached)
         
         from sqlalchemy import case
         results = self.session.query(
@@ -43,6 +50,10 @@ class MessageRepository(BaseRepository):
         unread_counts = {chat_id: 0 for chat_id in chat_ids}
         for chat_id, unread_count in results:
             unread_counts[chat_id] = unread_count or 0
+        
+        if redis_client:
+            import json
+            redis_client.setex(cache_key, 30, json.dumps(unread_counts))
         
         return unread_counts
 

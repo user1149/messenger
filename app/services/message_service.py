@@ -1,5 +1,7 @@
-from typing import Optional, Dict, List
+from typing import Optional, Dict, List, Any
 from datetime import datetime, timedelta
+from redis import Redis
+from sqlalchemy.orm import Session
 from app.repositories import UserRepository, MessageRepository, LastReadRepository, ChatRepository
 from app.exceptions.chat_errors import (
     ChatNotFoundError,
@@ -7,11 +9,22 @@ from app.exceptions.chat_errors import (
     MessageNotFoundError,
     MessageEditTimeExpiredError
 )
+from app.utils.constants import MessageEditWindow
 from app.utils.validators import validate_message_text, escape_html
 from app.logging import log_message_deleted, log_message_edited
 
 class MessageService:
-    def __init__(self, user_repo, message_repo, last_read_repo, chat_repo, redis_client, config):
+    """Сервис для управления сообщениями."""
+    
+    def __init__(
+        self,
+        user_repo: UserRepository,
+        message_repo: MessageRepository,
+        last_read_repo: LastReadRepository,
+        chat_repo: ChatRepository,
+        redis_client: Redis,
+        config: Dict[str, Any]
+    ) -> None:
         self.user_repo = user_repo
         self.message_repo = message_repo
         self.last_read_repo = last_read_repo
@@ -20,13 +33,16 @@ class MessageService:
         self.config = config
 
     def _check_user_in_chat(self, user_id: int, chat_id: str) -> bool:
+        """Проверка участия пользователя в чате."""
         return self.chat_repo.user_in_chat(user_id, chat_id)
     
     def get_unread_counts(self, user_id: int) -> Dict[str, int]:
+        """Получить количество непрочитанных сообщений для каждого чата."""
         chat_ids = self.chat_repo.get_user_chat_ids(user_id)
-        return self.message_repo.count_unread_for_user(user_id, chat_ids)
+        return self.message_repo.count_unread_for_user(user_id, chat_ids, self.redis)
 
-    def send_message(self, user_id: int, chat_id: str, text: str) -> Dict:
+    def send_message(self, user_id: int, chat_id: str, text: str) -> Dict[str, Any]:
+        """Отправить сообщение в чат."""
         if not self._check_user_in_chat(user_id, chat_id):
             raise AccessDeniedError("Вы не участник этого чата")
 
@@ -48,11 +64,12 @@ class MessageService:
             'edited': False
         }
 
-    def get_chat_history(self, chat_id: str, user_id: int) -> List[Dict]:
+    def get_chat_history(self, chat_id: str, user_id: int, limit: int = 100, offset: int = 0) -> List[Dict[str, Any]]:
+        """Получить историю сообщений с пагинацией."""
         if not self._check_user_in_chat(user_id, chat_id):
             raise AccessDeniedError("Вы не участник этого чата")
 
-        messages = self.message_repo.get_chat_history(chat_id)
+        messages = self.message_repo.get_chat_history(chat_id, limit=limit, offset=offset)
         return [{
             'id': m.id,
             'nickname': m.user.username,
@@ -65,7 +82,8 @@ class MessageService:
             'user_id': m.user_id
         } for m in messages]
 
-    def mark_read(self, user_id: int, chat_id: str):
+    def mark_read(self, user_id: int, chat_id: str) -> None:
+        """Отметить сообщения в чате как прочитанные."""
         if not self._check_user_in_chat(user_id, chat_id):
             raise AccessDeniedError()
         last_msg = self.message_repo.get_last_message(chat_id)
@@ -73,7 +91,8 @@ class MessageService:
             self.last_read_repo.update_or_create(user_id, chat_id, last_msg.id)
             self.last_read_repo.session.commit()
 
-    def delete_message(self, user_id: int, message_id: int, chat_id: str) -> Dict:
+    def delete_message(self, user_id: int, message_id: int, chat_id: str) -> Dict[str, Any]:
+        """Удалить сообщение."""
         if not self._check_user_in_chat(user_id, chat_id):
             raise AccessDeniedError()
 
@@ -84,7 +103,7 @@ class MessageService:
         if message.user_id != user_id:
             raise AccessDeniedError("Вы не можете удалить сообщение другого пользователя")
 
-        if datetime.utcnow() - message.timestamp > timedelta(minutes=5):
+        if datetime.utcnow() - message.timestamp > timedelta(seconds=MessageEditWindow.SECONDS):
             raise MessageEditTimeExpiredError("Сообщения можно удалять только в течение 5 минут")
 
         success = self.message_repo.delete_message(message_id)
@@ -97,7 +116,8 @@ class MessageService:
 
         return {"chat_id": chat_id, "message_id": message_id}
 
-    def edit_message(self, user_id: int, message_id: int, chat_id: str, new_text: str) -> Dict:
+    def edit_message(self, user_id: int, message_id: int, chat_id: str, new_text: str) -> Dict[str, Any]:
+        """Редактировать сообщение."""
         if not self._check_user_in_chat(user_id, chat_id):
             raise AccessDeniedError()
 
@@ -110,7 +130,7 @@ class MessageService:
         if message.user_id != user_id:
             raise AccessDeniedError("Вы не можете редактировать сообщение другого пользователя")
 
-        if datetime.utcnow() - message.timestamp > timedelta(minutes=5):
+        if datetime.utcnow() - message.timestamp > timedelta(seconds=MessageEditWindow.SECONDS):
             raise MessageEditTimeExpiredError("Сообщения можно редактировать только в течение 5 минут")
 
         safe_text = escape_html(new_text)

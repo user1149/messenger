@@ -187,9 +187,10 @@ class Auth {
         const url = this.isLoginMode ? '/login' : '/register';
 
         try {
+            const csrfToken = document.getElementById('csrf-token').value;
             const response = await fetch(url, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': csrfToken },
                 body,
             });
             const data = await response.json();
@@ -197,12 +198,16 @@ class Auth {
             if (!response.ok || data.error) {
                 if (data.not_confirmed) {
                     const email = data.email || (this.isLoginMode ? elements.authLogin.value.trim() : '');
-                    elements.authError.innerHTML = `${data.error} <a href="#" id="resend-link" data-email="${email}">Отправить повторно</a>`;
-                    elements.authError.classList.remove('hidden');
-                    document.getElementById('resend-link').addEventListener('click', (e) => {
+                    elements.authError.textContent = data.error + ' ';
+                    const link = document.createElement('a');
+                    link.href = '#';
+                    link.textContent = 'Отправить повторно';
+                    link.addEventListener('click', (e) => {
                         e.preventDefault();
                         this.resendConfirmation(email);
                     });
+                    elements.authError.appendChild(link);
+                    elements.authError.classList.remove('hidden');
                 } else {
                     this.showError(data.error || 'Ошибка сервера');
                 }
@@ -243,9 +248,10 @@ class Auth {
 
     async resendConfirmation(email) {
         try {
+            const csrfToken = document.getElementById('csrf-token').value;
             const response = await fetch('/resend-confirmation', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
                 body: JSON.stringify({ email })
             });
             const data = await response.json();
@@ -284,9 +290,10 @@ class Auth {
 
     async logout() {
         try {
+            const csrfToken = document.getElementById('csrf-token').value;
             const response = await fetch('/logout', {
                 method: 'POST',
-                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': csrfToken },
             });
             if (response.ok) {
                 if (this.app.socket.socket) this.app.socket.socket.disconnect();

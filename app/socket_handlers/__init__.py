@@ -1,10 +1,8 @@
-from .presence import register_presence_handlers
-from .messaging import register_messaging_handlers
-from .groups import register_groups_handlers
-from .moderation import register_moderation_handlers
+"""Socket.IO обработчики регистрация (точка входа)."""
+from app.socket.events import register_socket_events
+
 
 def register_socket_handlers(socketio, container):
-    register_presence_handlers(socketio, container)
-    register_messaging_handlers(socketio, container)
-    register_groups_handlers(socketio, container)
-    register_moderation_handlers(socketio, container)
+    """Регистрация всех socket.io обработчиков."""
+    register_socket_events(socketio, container)
+

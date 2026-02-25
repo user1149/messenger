@@ -88,5 +88,7 @@ def resend_confirmation():
 @bp.route('/logout', methods=['POST'])
 @login_required
 def logout():
+    from app.logging import log_user_logout
+    log_user_logout(current_user.id, current_user.username)
     logout_user()
     return jsonify({'success': True}), 200

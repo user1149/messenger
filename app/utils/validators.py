@@ -6,6 +6,8 @@ def escape_html(text: str) -> str:
     return html.escape(text)
 
 def validate_email(email: str):
+    if len(email) > 254:
+        raise ValidationError("Email слишком длинный")
     pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
     if not re.match(pattern, email):
         raise ValidationError("Неверный формат email")

@@ -1,10 +1,10 @@
-from typing import Any
+"""Контейнер зависимостей приложения."""
+from typing import Any, Dict, Optional
 from sqlalchemy.orm import Session
 from redis import Redis
 from app.tasks.email_tasks import EmailTask
 from app.services.chat_service import ChatService
-
-
+from app.integrations.email_provider import FlaskMailProvider
 from app.repositories import (
     UserRepository,
     ChatRepository,
@@ -19,8 +19,11 @@ from app.services import (
     PresenceService
 )
 
+
 class Container:
-    def __init__(self, db_session: Session, redis_client: Redis, config: Any):
+    """DI контейнер с управлением всеми зависимостями."""
+    
+    def __init__(self, db_session: Session, redis_client: Redis, config: Dict[str, Any]) -> None:
         self.db_session = db_session
         self.redis_client = redis_client
         self.config = config
@@ -31,12 +34,16 @@ class Container:
         self.message_repo = MessageRepository(db_session)
         self.last_read_repo = LastReadRepository(db_session)
 
+        # Email провайдер
+        email_provider = FlaskMailProvider()
+        email_task = EmailTask()
+
         # Сервисы
         self.auth_service = AuthService(
             user_repo=self.user_repo,
             redis_client=self.redis_client,
             config=self.config,
-            email_task=EmailTask()
+            email_provider=email_provider
         )
         self.user_service = UserService(
             user_repo=self.user_repo
@@ -65,5 +72,7 @@ class Container:
         self.chat_service = ChatService(
             chat_repo=self.chat_repo,
             user_repo=self.user_repo,
-            message_repo=self.message_repo
+            message_repo=self.message_repo,
+            redis_client=self.redis_client
         )
+

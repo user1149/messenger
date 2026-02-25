@@ -14,7 +14,7 @@ def me():
 @login_required
 def users():
     search = request.args.get('q', '').strip()
-    if len(search) < 1:
+    if len(search) < 2:
         return jsonify([]), 200
     
     users_list = current_app.container.user_service.search_users(current_user.id, search)
