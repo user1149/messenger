@@ -16,12 +16,12 @@ def register_groups_handlers(socketio, container):
     @authenticated_only
     def handle_create_private_chat(data):
         if check_rate_limit(current_user.username, 'create_private_chat', redis_client):
-            emit('error', {'message': 'Rate limit'})
+            emit('error', {'message': 'Превышен лимит запросов'})
             return
         
         other_username = data.get('username', '').strip()
         if not other_username:
-            emit('error', {'message': 'Invalid username'})
+            emit('error', {'message': 'Неверное имя пользователя'})
             return
             
         try:
@@ -42,12 +42,12 @@ def register_groups_handlers(socketio, container):
     @authenticated_only
     def handle_create_group(data):
         if check_rate_limit(current_user.username, 'create_private_chat', redis_client):
-            emit('error', {'message': 'Rate limit'})
+            emit('error', {'message': 'Превышен лимит запросов'})
             return
         
         name = data.get('name', '').strip() if data else ''
         if not name or not name.strip() or len(name) > 100:
-            emit('error', {'message': 'Invalid group name'})
+            emit('error', {'message': 'Неверное название группы'})
             return
             
         description = data.get('description', '').strip()
@@ -78,11 +78,11 @@ def register_groups_handlers(socketio, container):
         try:
             user_id = int(data.get('user_id', 0))
         except (ValueError, TypeError):
-            emit('error', {'message': 'Invalid user_id'})
+            emit('error', {'message': 'Неверный user_id'})
             return
             
         if not chat_id or not user_id:
-            emit('error', {'message': 'Invalid parameters'})
+            emit('error', {'message': 'Неверные параметры'})
             return
             
         try:
@@ -109,11 +109,11 @@ def register_groups_handlers(socketio, container):
         try:
             user_id = int(data.get('user_id', 0))
         except (ValueError, TypeError):
-            emit('error', {'message': 'Invalid user_id'})
+            emit('error', {'message': 'Неверный user_id'})
             return
             
         if not chat_id or not user_id:
-            emit('error', {'message': 'Invalid parameters'})
+            emit('error', {'message': 'Неверные параметры'})
             return
             
         try:
@@ -140,7 +140,7 @@ def register_groups_handlers(socketio, container):
             if info:
                 emit('group_info', info)
             else:
-                emit('error', {'message': 'Group not found'})
+                emit('error', {'message': 'Группа не найдена'})
         except Exception as e:
             logger.exception("Error in get_group_info")
             emit('error', {'message': str(e)})

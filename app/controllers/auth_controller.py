@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, current_app, url_for, redirect
+from flask import Blueprint, request, jsonify, current_app, url_for, redirect, render_template
 from flask_login import login_user, logout_user, login_required
 from app.exceptions.auth_errors import (
     ValidationError,
@@ -10,6 +10,10 @@ from app.exceptions.auth_errors import (
 )
 
 bp = Blueprint('auth', __name__)
+
+@bp.route('/login')
+def login_page():
+    return render_template('index.html')
 
 @bp.route('/register', methods=['POST'])
 def register():

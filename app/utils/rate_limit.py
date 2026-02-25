@@ -18,7 +18,7 @@ def rate_limit_socket(action: str):
         def wrapped(data=None):
             from flask_login import current_user
             if check_rate_limit(current_user.username, action, current_app.container.redis_client):
-                emit('error', {'message': 'Rate limit'})
+                emit('error', {'message': 'Превышен лимит запросов'})
                 return
             return f(data)
         return wrapped

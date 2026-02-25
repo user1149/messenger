@@ -378,7 +378,7 @@ class Chat {
                 });
             });
         } catch (err) {
-            console.error('Search error', err);
+            console.error('Ошибка поиска', err);
             this.app.ui.showNotification('Ошибка при поиске пользователей', true);
         }
     }

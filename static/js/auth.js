@@ -5,6 +5,41 @@ class Auth {
         this.isLoginMode = true;
         this.isSubmitting = false;
         this.attachValidationListeners();
+        this.attachPasswordToggleListeners();
+    }
+
+    attachPasswordToggleListeners() {
+        const passwordToggle = document.getElementById('auth-password-toggle');
+        const passwordConfirmToggle = document.getElementById('auth-password-confirm-toggle');
+        const passwordInput = document.getElementById('auth-password');
+        const passwordConfirmInput = document.getElementById('auth-password-confirm');
+
+        if (passwordToggle && passwordInput) {
+            passwordToggle.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.togglePasswordVisibility(passwordInput, passwordToggle);
+            });
+        }
+
+        if (passwordConfirmToggle && passwordConfirmInput) {
+            passwordConfirmToggle.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.togglePasswordVisibility(passwordConfirmInput, passwordConfirmToggle);
+            });
+        }
+    }
+
+    togglePasswordVisibility(input, button) {
+        const icon = button.querySelector('i');
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.classList.remove('fa-eye');
+            icon.classList.add('fa-eye-slash');
+        } else {
+            input.type = 'password';
+            icon.classList.remove('fa-eye-slash');
+            icon.classList.add('fa-eye');
+        }
     }
 
     attachValidationListeners() {

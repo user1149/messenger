@@ -18,11 +18,11 @@ def register_moderation_handlers(socketio, container):
         try:
             message_id = int(data.get('message_id', 0))
         except (ValueError, TypeError):
-            emit('error', {'message': 'Invalid message_id'})
+            emit('error', {'message': 'Неверный message_id'})
             return
             
         if not chat_id or not message_id:
-            emit('error', {'message': 'Invalid parameters'})
+            emit('error', {'message': 'Неверные параметры'})
             return
             
         chat_service = container.chat_service
@@ -37,7 +37,7 @@ def register_moderation_handlers(socketio, container):
             emit('error', {'message': str(e)})
         except Exception as e:
             logger.exception("Error in delete_message")
-            emit('error', {'message': 'Internal error'})
+            emit('error', {'message': 'Внутренняя ошибка'})
 
     @socketio.on('edit_message')
     @authenticated_only
@@ -46,13 +46,13 @@ def register_moderation_handlers(socketio, container):
         try:
             message_id = int(data.get('message_id', 0))
         except (ValueError, TypeError):
-            emit('error', {'message': 'Invalid message_id'})
+            emit('error', {'message': 'Неверный message_id'})
             return
             
         new_text = data.get('text', '').strip()
         
         if not chat_id or not message_id or not new_text:
-            emit('error', {'message': 'Invalid parameters'})
+            emit('error', {'message': 'Неверные параметры'})
             return
             
         chat_service = container.chat_service

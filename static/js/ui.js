@@ -459,7 +459,7 @@ class UI {
                     });
                 });
             } catch (err) {
-                console.error('Search error', err);
+                console.error('Ошибка поиска', err);
                 this.app.ui.showNotification('Ошибка поиска пользователей', true);
             }
         }, 300));
@@ -544,7 +544,7 @@ class UI {
                         });
                     });
                 } catch (err) {
-                    console.error('Search error', err);
+                    console.error('Ошибка поиска', err);
                 }
             }, 300));
         }

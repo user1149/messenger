@@ -57,6 +57,38 @@
     color: #4f7eb3;
 }
 
+.auth-card .password-input-group {
+    position: relative;
+}
+
+.auth-card .password-input-group input {
+    padding-right: 36px;
+}
+
+.auth-card .toggle-password-btn {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: #666;
+    cursor: pointer;
+    font-size: 0.9rem;
+    padding: 4px;
+    width: auto;
+    margin: 0;
+    transition: color 0.1s;
+}
+
+.auth-card .toggle-password-btn:hover {
+    color: #4f7eb3;
+}
+
+.auth-card .input-group:focus-within .toggle-password-btn {
+    color: #4f7eb3;
+}
+
 .auth-card input {
     width: 100%;
     padding: 10px 10px 10px 36px;
@@ -101,10 +133,10 @@
 .auth-card button {
     width: 100%;
     padding: 10px;
-    background: #4f7eb3;
+    background: var(--accent, #4f7eb3);
     color: #fff;
     border: none;
-    border-radius: 4px;
+    border-radius: 6px;
     font-weight: 500;
     font-size: 0.9rem;
     cursor: pointer;

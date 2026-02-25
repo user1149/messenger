@@ -42,7 +42,7 @@ def register_presence_handlers(socketio, container):
         except Exception as e:
             logger.exception("Error in connect handler")
             try:
-                emit('error', {'message': 'Connection error'})
+                emit('error', {'message': 'Ошибка соединения'})
                 disconnect()
             except Exception:
                 pass

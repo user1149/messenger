@@ -8,22 +8,22 @@ def escape_html(text: str) -> str:
 def validate_email(email: str):
     pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
     if not re.match(pattern, email):
-        raise ValidationError("Invalid email")
+        raise ValidationError("Неверный формат email")
 
 def validate_username(username: str):
     if len(username) < 3 or len(username) > 20:
-        raise ValidationError("Username must be 3-20 characters")
+        raise ValidationError("Имя пользователя должно быть от 3 до 20 символов")
     if not re.match(r'^[a-zA-Z0-9_]+$', username):
-        raise ValidationError("Username can only contain letters, numbers and underscores")
+        raise ValidationError("Имя пользователя может содержать только буквы, цифры и подчеркивание")
 
 def validate_password(password: str):
     if len(password) < 8:
-        raise ValidationError("Password must be at least 8 characters")
+        raise ValidationError("Пароль должен содержать минимум 8 символов")
     if not any(c.isupper() for c in password):
-        raise ValidationError("Password must contain uppercase letter")
+        raise ValidationError("Пароль должен содержать хотя бы одну заглавную букву")
     if not any(c.isdigit() for c in password):
-        raise ValidationError("Password must contain digit")
+        raise ValidationError("Пароль должен содержать хотя бы одну цифру")
 
 def validate_message_text(text: str):
     if not text or len(text) > 500:
-        raise ValidationError("Message text must be between 1 and 500 characters")
+        raise ValidationError("Текст сообщения должен быть от 1 до 500 символов")

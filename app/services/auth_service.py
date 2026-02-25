@@ -12,7 +12,7 @@ from app.exceptions.auth_errors import (
 )
 from app.repositories.user_repository import UserRepository
 from app.utils.validators import validate_email, validate_username, validate_password
-from app.utils.audit_log import log_user_registered, log_user_login
+from app.logging import log_user_registered, log_user_login
 
 class AuthService:
     def __init__(self, user_repo: UserRepository, redis_client, config, email_task):
@@ -24,7 +24,7 @@ class AuthService:
     def _check_rate_limit(self, key: str, max_attempts: int, period: int) -> bool:
         current = self.redis.get(key)
         if current and int(current) >= max_attempts:
-            raise RateLimitExceededError("Too many attempts")
+            raise RateLimitExceededError("Слишком много попыток")
         pipe = self.redis.pipeline()
         pipe.incr(key)
         pipe.expire(key, period)
@@ -33,16 +33,16 @@ class AuthService:
 
     def register(self, username: str, email: str, password: str) -> Dict:
         if not username or not email or not password:
-            raise ValidationError("All fields are required")
+            raise ValidationError("Все поля обязательны")
         
         validate_username(username)
         validate_email(email)
         validate_password(password)
 
         if self.user_repo.get_by_username_ci(username):
-            raise UsernameAlreadyExistsError("Username already taken")
+            raise UsernameAlreadyExistsError("Это имя пользователя уже занято")
         if self.user_repo.get_by_email_ci(email):
-            raise EmailAlreadyExistsError("Email already registered")
+            raise EmailAlreadyExistsError("Этот email уже зарегистрирован")
 
         password_hash = generate_password_hash(password)
         user = self.user_repo.create(username, email, password_hash)
@@ -77,14 +77,14 @@ class AuthService:
             user = self.user_repo.get_by_username_ci(login)
 
         if not user or not check_password_hash(user.password_hash, password):
-            raise InvalidCredentialsError("Invalid login or password")
+            raise InvalidCredentialsError("Неверный логин или пароль")
 
         if ip_key:
             self.redis.delete(ip_key)
         self.redis.delete(login_key)
 
         if not user.confirmed:
-            raise UserNotFoundError("Email not confirmed", not_confirmed=True, email=user.email)
+            raise UserNotFoundError("Email не подтвержден", not_confirmed=True, email=user.email)
 
         log_user_login(user.id, user.username, ip or "unknown")
 
@@ -93,12 +93,12 @@ class AuthService:
     def confirm_user(self, token: str) -> Dict:
         user_id = self.redis.get(f"confirm_token:{token}")
         if not user_id:
-            raise UserNotFoundError("Invalid or expired token")
+            raise UserNotFoundError("Неверный или истекший токен")
         
         from app.models.user import User
         user = self.user_repo.get_by_id(int(user_id))
         if not user:
-            raise UserNotFoundError("User not found")
+            raise UserNotFoundError("Пользователь не найден")
         
         user.confirmed = True
         user.confirmed_at = datetime.utcnow()
@@ -112,9 +112,9 @@ class AuthService:
     def resend_confirmation(self, email: str) -> Dict:
         user = self.user_repo.get_by_email_ci(email)
         if not user:
-            raise UserNotFoundError("User not found")
+            raise UserNotFoundError("Пользователь не найден")
         if user.confirmed:
-            raise ValidationError("Email already confirmed")
+            raise ValidationError("Email уже подтвержден")
         token = self._generate_confirmation_token(user)
         self.email_task.send_confirmation(user.email, user.username, token)
-        return {"message": "Confirmation email resent"}
+        return {"message": "Письмо подтверждения отправлено повторно"}

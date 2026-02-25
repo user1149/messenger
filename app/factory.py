@@ -28,7 +28,7 @@ def create_app(config_object=None):
     # Инициализация расширений
     db.init_app(app)
     login_manager.init_app(app)
-    login_manager.login_view = 'pages.index'
+    login_manager.login_view = 'auth.login_page'
     mail.init_app(app)
 
     @login_manager.user_loader

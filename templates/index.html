@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-    <title>NoTitle</title>
+    <title>Мессенджер</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css') }}">
@@ -38,14 +38,20 @@
                     <input type="text" id="auth-username" placeholder="Имя пользователя" autocomplete="off">
                 </div>
 
-                <div class="input-group">
+                <div class="input-group password-input-group">
                     <i class="fas fa-lock"></i>
                     <input type="password" id="auth-password" placeholder="Пароль">
+                    <button type="button" class="toggle-password-btn" id="auth-password-toggle">
+                        <i class="fas fa-eye"></i>
+                    </button>
                 </div>
 
-                <div class="input-group hidden" id="password-confirm-group">
+                <div class="input-group hidden password-input-group" id="password-confirm-group">
                     <i class="fas fa-lock"></i>
                     <input type="password" id="auth-password-confirm" placeholder="Повторите пароль">
+                    <button type="button" class="toggle-password-btn" id="auth-password-confirm-toggle">
+                        <i class="fas fa-eye"></i>
+                    </button>
                 </div>
 
                 <button id="auth-submit">Войти</button>
@@ -73,13 +79,13 @@
                                 <span>Выйти</span>
                             </button>
                             <div class="popup-footer">
-                                <span class="popup-version">v1.0.0</span>
+                                <span class="popup-version">версия 1.0.0</span>
                             </div>
                         </div>
                     </div>
 
                     <div class="chats-header-center">
-                        <input type="text" id="sidebar-user-search" placeholder=" Поиск" autocomplete="off">
+                        <input type="text" id="sidebar-user-search" placeholder="Поиск" autocomplete="off">
                         <div id="sidebar-search-results" class="search-results"></div>
                     </div>
                 </div>
@@ -105,7 +111,7 @@
 
                 <div id="input-area" class="input-area hidden">
                     <input type="text" id="message-input" placeholder="Введите сообщение" autocomplete="off">
-                    <button id="send-btn">➤</button>
+                    <button id="send-btn">➤ Отправить</button>
                 </div>
             </div>
         </div>

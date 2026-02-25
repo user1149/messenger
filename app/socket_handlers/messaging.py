@@ -15,12 +15,12 @@ def register_messaging_handlers(socketio, container):
     @socketio.on('join_chat')
     def handle_join_chat(data):
         if check_rate_limit(current_user.username, 'join_chat', redis_client):
-            emit('error', {'message': 'Too many requests'})
+            emit('error', {'message': 'Превышен лимит запросов'})
             return
         
         chat_id = data.get('chat_id', '').strip()
         if not chat_id:
-            emit('error', {'message': 'Invalid chat_id'})
+            emit('error', {'message': 'Неверный chat_id'})
             return
             
         chat_service = container.chat_service
@@ -34,27 +34,27 @@ def register_messaging_handlers(socketio, container):
             counts = chat_service.get_unread_counts(current_user.id)
             emit('unread_counts', counts)
         except AccessDeniedError:
-            emit('error', {'message': 'Access denied'})
+            emit('error', {'message': 'Оксес запрещен'})
         except ChatNotFoundError:
-            emit('error', {'message': 'Chat not found'})
+            emit('error', {'message': 'Чат не найден'})
         except Exception as e:
             logger.exception("Error in join_chat")
-            emit('error', {'message': 'Internal error'})
+            emit('error', {'message': 'Внутренняя ошибка'})
 
     @socketio.on('new_message')
     def handle_new_message(data):
         if check_rate_limit(current_user.username, 'new_message', redis_client):
-            emit('error', {'message': 'Rate limit'})
+            emit('error', {'message': 'Превышен лимит запросов'})
             return
         
         if not data:
-            emit('error', {'message': 'Invalid request'})
+            emit('error', {'message': 'Невалидный запрос'})
             return
         chat_id = data.get('chat_id', '').strip()
         text = data.get('text', '').strip()
         
         if not chat_id or not text:
-            emit('error', {'message': 'Invalid chat_id or text'})
+            emit('error', {'message': 'Неверные chat_id или text'})
             return
             
         chat_service = container.chat_service
