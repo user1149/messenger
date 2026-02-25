@@ -84,15 +84,21 @@
     border-radius: 4px;
     z-index: 2;
     margin: 0;
-    transition: color 0.1s;
+        transition: color 0.18s ease, transform 0.18s ease, background-color 0.18s ease;
+        background-color: transparent;
+        outline: none;
+        box-shadow: none;
+        -webkit-tap-highlight-color: transparent;
 }
 
 .auth-card .toggle-password-btn:hover {
-    color: #4f7eb3;
+        color: var(--accent, #4f7eb3);
+        transform: translateY(-50%) scale(1.03);
+        background-color: transparent;
 }
 
 .auth-card .input-group:focus-within .toggle-password-btn {
-    color: #4f7eb3;
+        color: var(--accent, #4f7eb3);
 }
 
 .auth-card input {
