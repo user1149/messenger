@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, current_app
+from flask import Blueprint, request, jsonify, current_app, render_template
 from flask_login import login_user, logout_user, login_required, current_user
 from app.exceptions.auth_errors import (
     ValidationError,
@@ -7,6 +7,11 @@ from app.exceptions.auth_errors import (
 )
 
 bp = Blueprint('auth', __name__)
+
+@bp.route('/login')
+def login_page():
+    """Страница логина."""
+    return render_template('auth.html')
 
 @bp.route('/logout', methods=['POST'])
 @login_required

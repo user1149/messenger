@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>Вход - Мессенджер</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile.css') }}">
+</head>
+<body>
+    <div class="auth-overlay">
+        <div class="auth-card">
+            <input type="hidden" id="csrf-token" value="{{ csrf_token() }}">
+
+            <div id="phone-step">
+                <h2 class="auth-card-title">Добро пожаловать</h2>
+                <p class="auth-card-subtitle">Войдите с помощью номера телефона</p>
+                <div id="phone-error" class="error-message hidden"></div>
+                <div class="input-group">
+                    <i class="fas fa-phone"></i>
+                    <input type="tel" id="phone-input" placeholder="+7 (900) 123-45-67" autocomplete="off">
+                </div>
+                <button id="phone-send-btn" class="btn-primary btn-full">Отправить код</button>
+            </div>
+
+            <div id="code-step" class="hidden">
+                <h2 class="auth-card-title">Проверка кода</h2>
+                <p class="auth-card-subtitle">Код отправлен на <span class="masked-phone"></span></p>
+                <div id="code-error" class="error-message hidden"></div>
+                <div class="input-group">
+                    <i class="fas fa-lock"></i>
+                    <input type="text" id="code-input" placeholder="000000" maxlength="6" autocomplete="off" inputmode="numeric">
+                </div>
+                <button id="code-verify-btn" class="btn-primary btn-full">Проверить</button>
+                <button id="code-back-btn" class="btn-secondary btn-full">← Назад</button>
+            </div>
+
+            <div id="profile-step" class="hidden">
+                <h2 class="auth-card-title">Создание профиля</h2>
+                <div id="profile-error" class="error-message hidden"></div>
+                <div class="input-group">
+                    <i class="fas fa-user"></i>
+                    <input type="text" id="username-input" placeholder="Имя пользователя" autocomplete="off">
+                </div>
+                <button id="profile-create-btn" class="btn-primary btn-full">Создать профиль</button>
+                <button id="profile-back-btn" class="btn-secondary btn-full">← Назад</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
+</body>
+</html>
