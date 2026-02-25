@@ -43,3 +43,23 @@ def log_user_logout(user_id: int, username: str):
 
 def log_user_registered(user_id: int, username: str, email: str):
     audit_logger.info(f"USER_REGISTERED | user_id={user_id} username={username} email={email}")
+
+
+def log_failed_login(username: str, ip: str, reason: str = "invalid_credentials"):
+    """Логировать неудачную попытку входа."""
+    audit_logger.warning(f"FAILED_LOGIN | username={username} ip={ip} reason={reason}")
+
+
+def log_rate_limit_exceeded(key: str, limit_type: str, ip: str = None):
+    """Логировать превышение rate limit."""
+    audit_logger.warning(f"RATE_LIMIT_EXCEEDED | key={key} type={limit_type} ip={ip or 'unknown'}")
+
+
+def log_unauthorized_access(user_id: int, username: str, resource: str, action: str, ip: str = None):
+    """Логировать попытку несанкционированного доступа."""
+    audit_logger.warning(f"UNAUTHORIZED_ACCESS | user_id={user_id} username={username} resource={resource} action={action} ip={ip or 'unknown'}")
+
+
+def log_soft_ban(phone: str, level: int, reason: str = "sms_brute_force"):
+    """Логировать применение soft ban."""
+    audit_logger.warning(f"SOFT_BAN | phone={phone} level={level} reason={reason}")

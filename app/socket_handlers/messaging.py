@@ -1,7 +1,9 @@
 from flask_socketio import emit, join_room
 from flask_login import current_user
 from app.utils.rate_limit import check_rate_limit
+from app.utils.validators import validate_chat_id
 from app.exceptions.chat_errors import ChatNotFoundError, AccessDeniedError
+from app.exceptions.auth_errors import ValidationError
 import logging
 
 logger = logging.getLogger(__name__)
@@ -18,9 +20,11 @@ def register_messaging_handlers(socketio, container):
             emit('error', {'message': 'Превышен лимит запросов'})
             return
         
-        chat_id = data.get('chat_id', '').strip()
-        if not chat_id:
-            emit('error', {'message': 'Неверный chat_id'})
+        try:
+            chat_id = data.get('chat_id', '').strip()
+            validate_chat_id(chat_id)
+        except ValidationError as e:
+            emit('error', {'message': str(e)})
             return
             
         chat_service = container.chat_service
@@ -50,11 +54,18 @@ def register_messaging_handlers(socketio, container):
         if not data:
             emit('error', {'message': 'Невалидный запрос'})
             return
-        chat_id = data.get('chat_id', '').strip()
+        
+        try:
+            chat_id = data.get('chat_id', '').strip()
+            validate_chat_id(chat_id)
+        except ValidationError as e:
+            emit('error', {'message': str(e)})
+            return
+            
         text = data.get('text', '').strip()
         
-        if not chat_id or not text:
-            emit('error', {'message': 'Неверные chat_id или text'})
+        if not text:
+            emit('error', {'message': 'Текст сообщения не может быть пустым'})
             return
             
         chat_service = container.chat_service
@@ -77,8 +88,10 @@ def register_messaging_handlers(socketio, container):
         if check_rate_limit(current_user.username, 'typing', redis_client):
             return
         
-        chat_id = data.get('chat_id', '').strip()
-        if not chat_id:
+        try:
+            chat_id = data.get('chat_id', '').strip()
+            validate_chat_id(chat_id)
+        except ValidationError:
             return
             
         is_typing = data.get('typing', False)
@@ -98,8 +111,10 @@ def register_messaging_handlers(socketio, container):
         if check_rate_limit(current_user.username, 'mark_read', redis_client):
             return
         
-        chat_id = data.get('chat_id', '').strip()
-        if not chat_id:
+        try:
+            chat_id = data.get('chat_id', '').strip()
+            validate_chat_id(chat_id)
+        except ValidationError:
             return
             
         try:

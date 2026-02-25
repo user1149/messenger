@@ -35,6 +35,8 @@ def create_app(config_object: Optional[object] = None) -> Flask:
             config_object = DevelopmentConfig
     
     app.config.from_object(config_object)
+    # Лимит на размер запроса (10 MB)
+    app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024
     init_logging(app)
 
     # Инициализация расширений
@@ -77,7 +79,7 @@ def create_app(config_object: Optional[object] = None) -> Flask:
         cors_allowed_origins=app.config["CORS_ORIGINS"],
         message_queue=app.config["REDIS_URL"],
         async_mode='threading',
-        csrf=False
+        csrf=True
     )
     register_socket_handlers(socketio, app.container)
 

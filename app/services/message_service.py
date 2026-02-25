@@ -86,8 +86,17 @@ class MessageService:
         """Отметить сообщения в чате как прочитанные."""
         if not self._check_user_in_chat(user_id, chat_id):
             raise AccessDeniedError()
+        
         last_msg = self.message_repo.get_last_message(chat_id)
         if last_msg:
+            # Использовать with_for_update() для предотвращения race condition
+            last_read = self.last_read_repo.session.query(
+                self.last_read_repo.model
+            ).filter_by(
+                user_id=user_id,
+                chat_id=chat_id
+            ).with_for_update().first()
+            
             self.last_read_repo.update_or_create(user_id, chat_id, last_msg.id)
             self.last_read_repo.session.commit()
 

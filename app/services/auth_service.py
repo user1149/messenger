@@ -1,6 +1,7 @@
 from typing import Optional, Dict, Any
 from datetime import datetime
 import secrets
+import json
 from redis import Redis
 from werkzeug.security import generate_password_hash
 from app.exceptions.auth_errors import (
@@ -15,7 +16,7 @@ from app.exceptions.auth_errors import (
 from app.repositories.user_repository import UserRepository
 from app.utils.constants import ValidationRules
 from app.utils.validators import validate_username
-from app.logging import log_user_registered, log_user_login
+from app.logging import log_user_registered, log_user_login, log_failed_login, log_rate_limit_exceeded, log_soft_ban
 
 class AuthService:
     """Сервис для аутентификации по номеру телефона."""
@@ -42,6 +43,58 @@ class AuthService:
         pipe.expire(key, period)
         pipe.execute()
         return False
+
+    def _get_soft_ban_status(self, phone: str) -> Optional[Dict[str, Any]]:
+        """Получить статус soft ban и exponential backoff для номера."""
+        ban_key = f"sms_soft_ban:{phone}"
+        ban_data = self.redis.get(ban_key)
+        if ban_data:
+            import json
+            try:
+                return json.loads(ban_data)
+            except:
+                return None
+        return None
+
+    def _apply_soft_ban(self, phone: str, attempt_count: int) -> None:
+        """Применить soft ban с exponential backoff."""
+        ban_key = f"sms_soft_ban:{phone}"
+        
+        # Определить длительность ban в зависимости от количества попыток
+        if attempt_count <= 5:
+            ban_duration = 60  # 1 минута для первого бана
+            next_level = 1
+        elif attempt_count <= 10:
+            ban_duration = 300  # 5 минут для второго уровня
+            next_level = 2
+        else:
+            ban_duration = 1800  # 30 минут для третьего уровня
+            next_level = 3
+        
+        ban_data = {
+            "level": next_level,
+            "attempts": attempt_count,
+            "ban_until": ban_duration
+        }
+        
+        ban_data_json = json.dumps(ban_data)
+        self.redis.setex(ban_key, ban_duration, ban_data_json)
+        
+        # Логировать soft ban
+        log_soft_ban(phone, next_level, "sms_brute_force")
+
+    def _check_soft_ban(self, phone: str) -> None:
+        """Проверить, не в soft ban ли номер."""
+        ban_status = self._get_soft_ban_status(phone)
+        if ban_status:
+            level = ban_status.get("level", 1)
+            log_rate_limit_exceeded(f"sms_verify:{phone}", "sms_brute_force")
+            if level == 1:
+                raise RateLimitExceededError("Слишком много попыток. Повторите через минуту")
+            elif level == 2:
+                raise RateLimitExceededError("Слишком много попыток. Повторите через 5 минут")
+            else:
+                raise RateLimitExceededError("Слишком много попыток. Повторите через 30 минут")
 
     def send_code(self, phone: str, ip: Optional[str] = None) -> Dict[str, Any]:
         from app.utils.validators import validate_phone, normalize_phone
@@ -83,20 +136,38 @@ class AuthService:
         
         phone_normalized = normalize_phone(phone)
         
-        ip_key = f"verify_code_ip:{ip}" if ip else None
+        # Проверить soft ban перед обработкой
+        self._check_soft_ban(phone_normalized)
+        
         phone_key = f"verify_code_phone:{phone_normalized}"
         
-        if ip_key:
-            self._check_rate_limit(ip_key, 10, 900)
-        self._check_rate_limit(phone_key, 5, 900)
+        # Получить текущее количество попыток
+        attempt_count = self.redis.get(phone_key)
+        attempt_count = int(attempt_count) if attempt_count else 0
         
         stored_code = self.redis.get(f"auth_code:{phone_normalized}")
         if not stored_code:
             raise CodeExpiredError("Код истек, запросите новый")
         
-        if stored_code.decode() != code:
+        # Null check перед decode() - Redis может вернуть строку или bytes
+        decoded_code = stored_code.decode() if isinstance(stored_code, bytes) else stored_code
+        if decoded_code != code:
+            # Увеличить счетчик неудачных попыток и инкрементировать soft ban
+            attempt_count += 1
+            self.redis.setex(phone_key, 900, str(attempt_count))
+            
+            # Логировать неудачную попытку входа
+            log_failed_login(phone_normalized, "unknown", "invalid_sms_code")
+            
+            # Применить soft ban если превышено лимит
+            if attempt_count >= 5:
+                self._apply_soft_ban(phone_normalized, attempt_count)
+            
             raise InvalidCodeError("Неверный код")
         
+        # Очистить счетчик при успешной верификации
+        self.redis.delete(phone_key)
+        self.redis.delete(f"sms_soft_ban:{phone_normalized}")
         self.redis.delete(f"auth_code:{phone_normalized}")
         
         user = self.user_repo.session.query(self.user_repo.model).filter(
@@ -152,7 +223,9 @@ class AuthService:
         user.phone_verified_at = datetime.utcnow()
         user.username = username
         user.email = f"phone_{phone_normalized}@local.app"
-        user.password_hash = generate_password_hash(secrets.token_urlsafe(32))
+        # Для phone-auth пользователей пароль не генерируется (остается NULL)
+        # Пароль генерируется только для email-auth пользователей
+        user.password_hash = None
         user.confirmed = True
         user.confirmed_at = datetime.utcnow()
         user.profile_completed = False

@@ -1,4 +1,5 @@
 """Middleware для централизованной обработки ошибок."""
+import re
 from typing import Any, Tuple
 from flask import Flask, jsonify, request
 from werkzeug.exceptions import HTTPException
@@ -15,6 +16,21 @@ from app.exceptions.chat_errors import (
     MessageNotFoundError,
     MessageEditTimeExpiredError
 )
+
+
+def _sanitize_error_message(message: str) -> str:
+    """Sanitize error message by hiding sensitive information."""
+    # Hide file paths
+    message = re.sub(r'[/\\][\w./\\]+\.py(?::\d+)?', '[REDACTED_PATH]', message)
+    # Hide IP addresses
+    message = re.sub(r'\b(?:\d{1,3}\.){3}\d{1,3}\b', '[IP]', message)
+    # Hide connection strings
+    message = re.sub(r'(postgresql|mysql|mongodb)://\S+', '[REDACTED_CONNECTION]', message)
+    # Hide email addresses
+    message = re.sub(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b', '[EMAIL]', message)
+    # Hide database names
+    message = re.sub(r'(database|table|schema)\s*[\'"`]?\w+[\'"`]?', r'\1 [REDACTED]', message, flags=re.IGNORECASE)
+    return message
 
 
 def register_error_handlers(app: Flask) -> None:
@@ -48,7 +64,7 @@ def register_error_handlers(app: Flask) -> None:
     @app.errorhandler(500)
     def handle_internal_error(e: HTTPException) -> Tuple[Any, int]:
         """Обработка 500 ошибок."""
-        app.logger.exception(f"Internal error: {e}")
+        app.logger.exception(f"Internal error: {_sanitize_error_message(str(e))}")
         return jsonify({"error": "Internal server error"}), 500
     
     @app.errorhandler(ValidationError)
@@ -98,13 +114,13 @@ def register_error_handlers(app: Flask) -> None:
     @app.errorhandler(AppError)
     def handle_app_error(e: AppError) -> Tuple[Any, int]:
         """Обработка базовых ошибок приложения."""
-        app.logger.exception(f"App error: {e}")
+        app.logger.exception(f"App error: {_sanitize_error_message(str(e))}")
         return jsonify({"error": str(e)}), 400
     
     @app.errorhandler(Exception)
     def handle_unexpected_error(e: Exception) -> Tuple[Any, int]:
         """Обработка неожиданных ошибок."""
-        app.logger.exception(f"Unexpected error: {e}")
+        app.logger.exception(f"Unexpected error: {_sanitize_error_message(str(e))}")
         return jsonify({"error": "Internal server error"}), 500
 
 

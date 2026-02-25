@@ -1,6 +1,8 @@
 from flask_socketio import emit, join_room
 from flask_login import current_user
 from app.utils.rate_limit import check_rate_limit
+from app.utils.validators import validate_chat_id
+from app.exceptions.auth_errors import ValidationError
 from app.socket_handlers.presence import authenticated_only
 import logging
 
@@ -74,14 +76,20 @@ def register_groups_handlers(socketio, container):
     @socketio.on('add_to_group')
     @authenticated_only
     def handle_add_to_group(data):
-        chat_id = data.get('chat_id', '').strip()
+        try:
+            chat_id = data.get('chat_id', '').strip()
+            validate_chat_id(chat_id)
+        except ValidationError as e:
+            emit('error', {'message': str(e)})
+            return
+            
         try:
             user_id = int(data.get('user_id', 0))
         except (ValueError, TypeError):
             emit('error', {'message': 'Неверный user_id'})
             return
             
-        if not chat_id or not user_id:
+        if not user_id:
             emit('error', {'message': 'Неверные параметры'})
             return
             

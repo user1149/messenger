@@ -41,3 +41,12 @@ def validate_phone(phone: str):
     if not re.match(r'^\d{10,15}$', normalized):
         raise ValidationError("Неверный формат номера телефона")
     return normalized
+def validate_chat_id(chat_id: str):
+    """Валидация chat_id: не пусто, не >50 символов, только alnum + дефисы."""
+    if not chat_id:
+        raise ValidationError("chat_id не может быть пустым")
+    if len(chat_id) > 50:
+        raise ValidationError("chat_id не может быть больше 50 символов")
+    if not re.match(r'^[a-zA-Z0-9\-]+$', chat_id):
+        raise ValidationError("chat_id может содержать только буквы, цифры и дефисы")
+    return chat_id
