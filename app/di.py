@@ -2,7 +2,7 @@
 from typing import Any, Dict, Optional
 from sqlalchemy.orm import Session
 from redis import Redis
-from app.tasks.email_tasks import EmailTask
+
 from app.services.chat_service import ChatService
 from app.integrations.sms_provider import GenericHttpSmsProvider
 from app.repositories import (
@@ -36,7 +36,6 @@ class Container:
 
         # SMS провайдер
         sms_provider = GenericHttpSmsProvider(app)
-        email_task = EmailTask()
 
         # Сервисы
         self.auth_service = AuthService(

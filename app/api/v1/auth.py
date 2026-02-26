@@ -7,11 +7,10 @@ from marshmallow import ValidationError as MarshmallowValidationError
 from app.schemas import (
     UserResponseSchema,
 )
-from app.utils.decorators import handle_errors, require_email_confirmed
+from app.utils.decorators import handle_errors
 from app.exceptions.auth_errors import (
     ValidationError,
     UsernameAlreadyExistsError,
-    EmailAlreadyExistsError,
     InvalidCredentialsError,
     UserNotFoundError,
     RateLimitExceededError
@@ -49,34 +48,6 @@ def verify_code() -> Tuple[Any, int]:
     return jsonify({'success': True, 'exists': False, 'message': result.get('message')}), 200
 
 
-@bp.route("/confirm/<token>", methods=["GET"])
-def confirm_email(token: str) -> Tuple[Any, int]:
-    """Подтверждение email по токену."""
-    try:
-        result = current_app.container.auth_service.confirm_user(token)
-        return redirect(
-            url_for("pages.index", confirmed="1", message="Email confirmed successfully")
-        )
-    except (UserNotFoundError, ValidationError) as e:
-        return redirect(
-            url_for("pages.index", confirmed="0", message=str(e))
-        )
-
-
-@bp.route('/login-by-phone', methods=['POST'])
-@handle_errors
-def login_by_phone() -> Tuple[Any, int]:
-    """Вход по номеру телефона."""
-    data = request.get_json() or {}
-    phone = data.get('phone', '').strip()
-    ip = request.remote_addr or 'unknown'
-    result = current_app.container.auth_service.login_by_phone(phone, ip)
-    user = User.query.get(result['id'])
-    login_user(user, remember=True)
-    response_schema = UserResponseSchema()
-    return jsonify({'success': True, 'user': response_schema.dump(user)}), 200
-
-
 @bp.route('/register-by-phone', methods=['POST'])
 @handle_errors
 def register_by_phone() -> Tuple[Any, int]:
@@ -102,7 +73,6 @@ def logout() -> Tuple[Any, int]:
 
 @bp.route("/me", methods=["GET"])
 @login_required
-@require_email_confirmed
 def me() -> Tuple[Any, int]:
     """Получить информацию текущего пользователя."""
     schema = UserResponseSchema()

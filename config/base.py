@@ -33,19 +33,6 @@ class BaseConfig:
     if not BASE_URL:
         raise ValueError("BASE_URL not set in environment")
     
-    # Email
-    MAIL_SERVER = os.getenv("MAIL_SERVER", "smtp.gmail.com")
-    MAIL_PORT = int(os.getenv("MAIL_PORT", 587))
-    MAIL_USE_TLS = os.getenv("MAIL_USE_TLS", "True").lower() == "true"
-    MAIL_USERNAME = os.getenv("MAIL_USERNAME")
-    if not MAIL_USERNAME:
-        raise ValueError("MAIL_USERNAME not set in environment")
-    MAIL_PASSWORD = os.getenv("MAIL_PASSWORD")
-    if not MAIL_PASSWORD:
-        raise ValueError("MAIL_PASSWORD not set in environment")
-    MAIL_DEFAULT_SENDER = os.getenv("MAIL_DEFAULT_SENDER", MAIL_USERNAME)
-    CONFIRMATION_TOKEN_EXPIRATION = 60 * 60 * 24  # 24 hours
-    
     # Redis
     REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
     

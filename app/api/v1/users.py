@@ -4,7 +4,7 @@ from flask import Blueprint, request, jsonify, current_app
 from flask_login import login_required, current_user
 
 from app.schemas import UserSearchSchema
-from app.utils.decorators import handle_errors, require_email_confirmed
+from app.utils.decorators import handle_errors
 
 
 bp = Blueprint("api_v1_users", __name__, url_prefix="/api/v1/users")
@@ -12,7 +12,6 @@ bp = Blueprint("api_v1_users", __name__, url_prefix="/api/v1/users")
 
 @bp.route("", methods=["GET"])
 @login_required
-@require_email_confirmed
 @handle_errors
 def search_users() -> Tuple[Any, int]:
     """Поиск пользователей по username."""
@@ -32,7 +31,6 @@ def search_users() -> Tuple[Any, int]:
 
 @bp.route("/<int:user_id>", methods=["GET"])
 @login_required
-@require_email_confirmed
 @handle_errors
 def get_user(user_id: int) -> Tuple[Any, int]:
     """Получить информацию пользователя по ID."""

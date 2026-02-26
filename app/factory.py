@@ -6,7 +6,7 @@ from typing import Optional, TYPE_CHECKING
 from flask import Flask
 from app.models.user import User
 from config import DevelopmentConfig, ProductionConfig, TestingConfig
-from app.extensions import db, login_manager, socketio, mail, csrf
+from app.extensions import db, login_manager, socketio, csrf
 from app.di import Container
 from app.middleware import register_error_handlers, register_cors_headers
 from app.logging import init_logging
@@ -43,7 +43,6 @@ def create_app(config_object: Optional[object] = None) -> Flask:
     db.init_app(app)
     login_manager.init_app(app)
     login_manager.login_view = "auth.login_page"
-    mail.init_app(app)
     csrf.init_app(app)
 
     @login_manager.user_loader

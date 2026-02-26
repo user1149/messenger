@@ -5,18 +5,6 @@ from flask import jsonify, current_app
 from flask_login import current_user
 
 
-def require_email_confirmed(f: Callable) -> Callable:
-    """Decorator для проверки подтверждения email."""
-    @wraps(f)
-    def wrapper(*args: Any, **kwargs: Any) -> Any:
-        if not current_user.is_authenticated:
-            return jsonify({"error": "Not authenticated"}), 401
-        if not current_user.confirmed:
-            return jsonify({"error": "Email not confirmed"}), 403
-        return f(*args, **kwargs)
-    return wrapper
-
-
 def handle_errors(f: Callable) -> Callable:
     """Decorator для обработки исключений."""
     @wraps(f)

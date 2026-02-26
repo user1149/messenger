@@ -54,8 +54,6 @@ class ValidationRules:
     """Правила валидации."""
     USERNAME_MIN_LEN = 3
     USERNAME_MAX_LEN = 20
-    EMAIL_MAX_LEN = 254
-    PASSWORD_MIN_LEN = 8
     MESSAGE_MAX_LEN = 500
     GROUP_NAME_MAX_LEN = 100
     DESCRIPTION_MAX_LEN = 200
