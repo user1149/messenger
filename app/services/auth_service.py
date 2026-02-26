@@ -16,7 +16,7 @@ from app.exceptions.auth_errors import (
 from app.repositories.user_repository import UserRepository
 from app.utils.constants import ValidationRules
 from app.utils.validators import validate_username
-from app.logging import log_user_registered, log_user_login, log_failed_login, log_rate_limit_exceeded, log_soft_ban
+from app.logging import log_user_registered, log_user_login, log_failed_login, log_rate_limit_exceeded
 
 class AuthService:
     """Сервис для аутентификации по номеру телефона."""
@@ -77,9 +77,6 @@ class AuthService:
         
         ban_data_json = json.dumps(ban_data)
         self.redis.setex(ban_key, ban_duration, ban_data_json)
-        
-        # Логировать soft ban
-        log_soft_ban(phone, next_level, "sms_brute_force")
 
     def _check_soft_ban(self, phone: str) -> None:
         """Проверить, не в soft ban ли номер."""
