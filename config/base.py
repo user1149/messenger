@@ -24,14 +24,12 @@ class BaseConfig:
     }
     
     # Security
-    SECRET_KEY = os.getenv("SECRET_KEY")
-    if not SECRET_KEY:
-        raise ValueError("SECRET_KEY not set in environment")
+    # Для локальной разработки и тестов подставляем безопасные дефолты,
+    # чтобы импорт конфигурации не падал при отсутствии переменных окружения.
+    SECRET_KEY = os.getenv("SECRET_KEY") or "dev-secret-key-change-me"
     
     # URLs
-    BASE_URL = os.getenv("BASE_URL")
-    if not BASE_URL:
-        raise ValueError("BASE_URL not set in environment")
+    BASE_URL = os.getenv("BASE_URL") or "http://localhost:5000"
     
     # Redis
     REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")

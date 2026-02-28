@@ -99,11 +99,10 @@ class ChatRepository(BaseRepository):
             participant = ChatParticipant(user_id=user_id, chat_id=chat_id)
             self.session.add(participant)
             self.session.flush()
-            self.session.commit()
         except IntegrityError:
             self.session.rollback()
-            # Если участник уже добавлен, это не ошибка
-            raise ValueError("Пользователь уже участник этого чата")
+            # Если участник уже добавлен, считаем операцию успешной
+            return
 
     def remove_participant(self, user_id: int, chat_id: str):
         self.session.query(ChatParticipant).filter_by(

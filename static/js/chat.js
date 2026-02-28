@@ -1,8 +1,9 @@
-// chat.js
-class Chat {
+// static/js/chat.js
+const Chat = class {
     constructor(app) {
         this.app = app;
         this.currentChatId = null;
+        this.currentChatPartnerId = null;
         this.chatsData = {};
         this.unreadCounts = {};
         this.currentChatPartner = null;
@@ -14,7 +15,6 @@ class Chat {
         this.groupCreationInProgress = false;
         this.currentGroupInfo = null;
         this.activeMessageMenu = null;
-
         this.initGlobalHandlers();
     }
 
@@ -56,7 +56,15 @@ class Chat {
             const unread = this.unreadCounts[id]
                 ? `<span class="unread-badge">${this.unreadCounts[id]}</span>`
                 : '';
-            const avatar = name.charAt(0).toUpperCase();
+
+            let avatarHtml;
+            if (chat.avatarUrl) {
+                avatarHtml = `<img src="${chat.avatarUrl}" class="chat-avatar-img" alt="avatar">`;
+            } else {
+                avatarHtml = chat.type === 'group'
+                    ? '<i class="fas fa-users"></i>'
+                    : name.charAt(0).toUpperCase();
+            }
 
             const nameHtml = chat.type === 'group'
                 ? `<i class="fas fa-users"></i> ${Utils.escapeHtml(name)}`
@@ -64,7 +72,7 @@ class Chat {
 
             html += `
                 <div class="chat-item ${activeClass}" data-chat-id="${id}">
-                    <div class="chat-avatar">${avatar}</div>
+                    <div class="chat-avatar">${avatarHtml}</div>
                     <div class="chat-info">
                         <div class="chat-name">${nameHtml}</div>
                         <div class="chat-last-msg">${Utils.escapeHtml(lastMsg.substring(0, 30))}${lastMsg.length > 30 ? '…' : ''}</div>
@@ -97,29 +105,21 @@ class Chat {
         msgDiv.className = 'message';
         msgDiv.dataset.messageId = msg.id;
         msgDiv.dataset.userId = msg.user_id;
-
         const isOwn = msg.user_id === this.app.currentUserId;
         msgDiv.classList.add(isOwn ? 'own' : 'other');
-
         const safeNick = Utils.escapeHtml(msg.nickname);
         const safeText = Utils.escapeHtml(msg.text);
         const displayTime = Utils.formatTime(msg.timestamp);
-
         const chatData = this.chatsData[this.currentChatId];
         const chatType = chatData ? chatData.type : null;
-
-        // Группировка только в групповых чатах и только для чужих сообщений
-        const isGroupChat = chatType === 'group' && !isOwn;
-
+        const isGroupChat = chatType === 'group';
         let shouldShowNick = true;
         let isFirstInGroup = true;
-
-        if (isGroupChat && container.lastChild) {
+        if (isGroupChat && !isOwn && container.lastChild) {
             const lastMsg = container.lastChild;
             const lastUserId = lastMsg.dataset.userId;
             const lastWasOwn = lastMsg.classList.contains('own');
             const lastWasDeleted = lastMsg.classList.contains('deleted');
-
             if (!lastWasOwn && !lastWasDeleted && lastUserId === String(msg.user_id)) {
                 shouldShowNick = false;
                 isFirstInGroup = false;
@@ -127,21 +127,15 @@ class Chat {
             } else {
                 msgDiv.classList.add('first-in-group');
             }
-        } else if (isGroupChat) {
+        } else if (isGroupChat && !isOwn) {
             msgDiv.classList.add('first-in-group');
         }
-
-        // Удалённое сообщение
         if (msg.is_deleted) {
             msgDiv.classList.add('deleted');
-
-            // Аватар показываем только если это первое сообщение в группе
-            const avatarHtml = !isOwn && shouldShowNick ?
-                `<div class="avatar">${safeNick.charAt(0).toUpperCase()}</div>` : '';
-
-            const showNick = !isOwn && chatType === 'group' && shouldShowNick;
-            const nicknameHtml = showNick ? `<div class="message-nickname">${safeNick}</div>` : '';
-
+            const avatarHtml = !isOwn && isGroupChat && shouldShowNick ?
+                `<div class="avatar" data-user-id="${msg.user_id}">${safeNick.charAt(0).toUpperCase()}</div>` : '';
+            const showNick = !isOwn && isGroupChat && shouldShowNick;
+            const nicknameHtml = showNick ? `<div class="message-nickname"><span class="clickable-nickname" data-user-id="${msg.user_id}">${safeNick}</span></div>` : '';
             msgDiv.innerHTML = `
                 ${avatarHtml}
                 <div class="message-content">
@@ -154,24 +148,18 @@ class Chat {
                     </div>
                 </div>
             `;
-
             container.appendChild(msgDiv);
+            this.attachProfileClickHandlers(msgDiv, msg.user_id);
             return;
         }
-
-        // Обычное сообщение
-        const avatarHtml = !isOwn && shouldShowNick ?
-            `<div class="avatar">${safeNick.charAt(0).toUpperCase()}</div>` : '';
-
-        const showNick = !isOwn && chatType === 'group' && shouldShowNick;
-        const nicknameHtml = showNick ? `<div class="message-nickname">${safeNick}</div>` : '';
-
+        const avatarHtml = !isOwn && isGroupChat && shouldShowNick ?
+            `<div class="avatar" data-user-id="${msg.user_id}">${safeNick.charAt(0).toUpperCase()}</div>` : '';
+        const showNick = !isOwn && isGroupChat && shouldShowNick;
+        const nicknameHtml = showNick ? `<div class="message-nickname"><span class="clickable-nickname" data-user-id="${msg.user_id}">${safeNick}</span></div>` : '';
         const editedHtml = msg.edited ?
             '<span class="edited-indicator">ред.</span>' : '';
-
         const actionsHtml = isOwn ?
             `<div class="message-actions" data-message-id="${msg.id}">⋮</div>` : '';
-
         if (isOwn) {
             msgDiv.innerHTML = `
                 <div class="message-content">
@@ -198,9 +186,7 @@ class Chat {
                 </div>
             `;
         }
-
         container.appendChild(msgDiv);
-
         if (isOwn) {
             const actionsBtn = msgDiv.querySelector('.message-actions');
             if (actionsBtn) {
@@ -210,6 +196,16 @@ class Chat {
                 });
             }
         }
+        this.attachProfileClickHandlers(msgDiv, msg.user_id);
+    }
+
+    attachProfileClickHandlers(msgDiv, userId) {
+        msgDiv.querySelectorAll('.avatar[data-user-id], .clickable-nickname[data-user-id]').forEach(el => {
+            el.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.app.profile.openProfileModal(userId);
+            });
+        });
     }
 
     closeMessageMenu() {
@@ -226,29 +222,23 @@ class Chat {
 
     showMessageActions(event, messageId, currentText) {
         event.stopPropagation();
-
         this.closeMessageMenu();
-
         const messageDiv = event.target.closest('.message');
         if (!messageDiv) return;
-
         const menu = document.createElement('div');
         menu.className = 'message-actions-menu';
         menu.innerHTML = `
             <button class="edit-message">Редактировать</button>
             <button class="delete-message">Удалить</button>
         `;
-
         messageDiv.appendChild(menu);
         setTimeout(() => menu.classList.add('show'), 10);
         this.activeMessageMenu = menu;
-
         menu.querySelector('.edit-message').addEventListener('click', (e) => {
             e.stopPropagation();
             this.closeMessageMenu();
             this.app.ui.showEditMessageModal(messageId, currentText);
         });
-
         menu.querySelector('.delete-message').addEventListener('click', (e) => {
             e.stopPropagation();
             this.closeMessageMenu();
@@ -280,34 +270,41 @@ class Chat {
 
     resetToPlaceholder() {
         this.currentChatId = null;
+        this.currentChatPartnerId = null;
         this.app.ui.elements.messagesContainer.innerHTML = '';
         this.app.ui.elements.messagesContainer.classList.add('hidden');
         this.app.ui.elements.chatPlaceholder.classList.remove('hidden');
         this.app.ui.elements.chatHeader.classList.remove('hidden');
         this.app.ui.elements.inputArea.classList.add('hidden');
         this.app.ui.updateHeaderForNoChat();
+        this.clearChatHeaderAvatar();
+    }
+
+    clearChatHeaderAvatar() {
+        const avatarImg = this.app.ui.elements.chatAvatarImg;
+        const avatarPlaceholder = this.app.ui.elements.chatAvatarPlaceholder;
+        if (avatarImg) avatarImg.style.display = 'none';
+        if (avatarPlaceholder) {
+            avatarPlaceholder.style.display = 'flex';
+            avatarPlaceholder.textContent = '';
+        }
     }
 
     switchChat(chatId) {
         if (!this.app.socket.socket || !this.chatsData[chatId]) return;
-
         this.clearAllTimers();
         this.app.ui.elements.typingIndicator.classList.add('hidden');
         this.currentTypingUsers.clear();
-
         if (this.currentChatId) {
             this.app.socket.socket.emit('typing', { chat_id: this.currentChatId, typing: false });
         }
-
         this.isLoadingHistory = true;
         this.currentChatId = chatId;
-
         this.app.ui.elements.messagesContainer.innerHTML = '<div class="loader"></div>';
         this.app.ui.elements.messagesContainer.classList.remove('hidden');
         this.app.ui.elements.chatPlaceholder.classList.add('hidden');
         this.app.ui.elements.chatHeader.classList.add('hidden');
         this.app.ui.elements.inputArea.classList.add('hidden');
-
         this.historyTimeout = setTimeout(() => {
             if (this.isLoadingHistory) {
                 this.isLoadingHistory = false;
@@ -315,12 +312,73 @@ class Chat {
                 this.resetToPlaceholder();
             }
         }, 15000);
-
         this.app.socket.socket.emit('join_chat', { chat_id: chatId });
-
         if (Utils.isMobile()) {
             this.app.ui.closeSidebar();
             this.app.ui.elements.messageInput.blur();
+        }
+    }
+
+    async loadChatAvatar(chatId, username) {
+        try {
+            const userResp = await fetch(`/api/users/by-username/${encodeURIComponent(username)}`);
+            if (!userResp.ok) return;
+            const userData = await userResp.json();
+            const profileResp = await fetch(`/api/users/${userData.id}/profile`);
+            if (profileResp.ok) {
+                const profile = await profileResp.json();
+                if (this.chatsData[chatId]) {
+                    this.chatsData[chatId].avatarUrl = profile.avatar_url;
+                    this.renderChatsList();
+                }
+            }
+        } catch (err) {
+            console.error('Failed to load chat avatar', err);
+        }
+    }
+
+    async loadChatPartnerProfile(chatId) {
+        const chat = this.chatsData[chatId];
+        if (!chat || chat.type !== 'private') return;
+        const partnerName = chat.name;
+        try {
+            const userResp = await fetch(`/api/users/by-username/${encodeURIComponent(partnerName)}`);
+            if (!userResp.ok) return;
+            const userData = await userResp.json();
+            this.currentChatPartnerId = userData.id;
+            const profileResp = await fetch(`/api/users/${userData.id}/profile`);
+            if (profileResp.ok) {
+                const profile = await profileResp.json();
+                this.updateChatHeaderAvatar(profile.avatar_url, profile.username);
+                this.makeChatHeaderAvatarClickable(userData.id);
+            }
+        } catch (err) {
+            console.error('Failed to load partner profile', err);
+        }
+    }
+
+    makeChatHeaderAvatarClickable(userId) {
+        const avatarContainer = this.app.ui.elements.chatHeaderAvatar;
+        if (avatarContainer) {
+            avatarContainer.style.cursor = 'pointer';
+            avatarContainer.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.app.profile.openProfileModal(userId);
+            });
+        }
+    }
+
+    updateChatHeaderAvatar(avatarUrl, username) {
+        const avatarImg = this.app.ui.elements.chatAvatarImg;
+        const avatarPlaceholder = this.app.ui.elements.chatAvatarPlaceholder;
+        if (avatarUrl) {
+            avatarImg.src = avatarUrl;
+            avatarImg.style.display = 'block';
+            avatarPlaceholder.style.display = 'none';
+        } else {
+            avatarImg.style.display = 'none';
+            avatarPlaceholder.style.display = 'flex';
+            avatarPlaceholder.textContent = username.charAt(0).toUpperCase();
         }
     }
 
@@ -368,7 +426,6 @@ class Chat {
                 .map(u => `<div class="result-item" data-username="${Utils.escapeHtml(u.username)}">${Utils.escapeHtml(u.username)}</div>`)
                 .join('');
             resultsEl.classList.add('show');
-
             resultsEl.querySelectorAll('.result-item').forEach(div => {
                 div.addEventListener('click', () => {
                     const username = div.dataset.username;

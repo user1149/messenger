@@ -1,79 +1,125 @@
-class ProfileManager {
+// static/js/profile.js
+const ProfileManager = class {
     constructor(app) {
         this.app = app;
-        this.setupProfileMenuButton();
+        this.setupMenuItems();
     }
 
-    setupProfileMenuButton() {
-        const userMenuBtn = document.getElementById('user-menu-button');
-        if (userMenuBtn) {
-            userMenuBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.toggleUserPopup();
-            });
-        }
-
+    setupMenuItems() {
         const profileBtn = document.getElementById('popup-profile');
         if (profileBtn) {
             profileBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
-                this.openProfileMenu();
+                this.openProfileModal();
             });
         }
-
         const createGroupBtn = document.getElementById('popup-create-group');
         if (createGroupBtn) {
             createGroupBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
-                this.toggleUserPopup();
+                document.getElementById('user-popup')?.classList.add('hidden');
                 if (this.app && this.app.chat) {
                     this.app.chat.showCreateGroupDialog?.();
                 }
             });
         }
-
         const logoutBtn = document.getElementById('popup-logout');
         if (logoutBtn) {
             logoutBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
-                this.toggleUserPopup();
                 if (this.app && this.app.auth) {
                     this.app.auth.logout();
                 }
             });
         }
-
-        document.addEventListener('click', (e) => {
-            const userPopup = document.getElementById('user-popup');
-            const userMenuButton = document.getElementById('user-menu-button');
-            if (userPopup && userMenuButton && !userPopup.contains(e.target) && !userMenuButton.contains(e.target)) {
-                userPopup.classList.add('hidden');
-            }
-        });
     }
 
-    toggleUserPopup() {
+    async openProfileModal(userId = null) {
         const userPopup = document.getElementById('user-popup');
-        if (userPopup) {
-            userPopup.classList.toggle('hidden');
+        if (userPopup) userPopup.classList.add('hidden');
+        const isOwn = !userId || userId === this.app.currentUserId;
+        const targetId = userId || this.app.currentUserId;
+        if (!isOwn) {
+            this.openUserProfileModal(targetId);
+            return;
         }
-    }
-
-    async openProfileMenu() {
-        const userPopup = document.getElementById('user-popup');
-        if (userPopup) {
-            userPopup.classList.add('hidden');
-        }
-
         let profileModal = document.getElementById('profile-modal');
         if (!profileModal) {
             this.createProfileModal();
             profileModal = document.getElementById('profile-modal');
         }
-
         if (profileModal) {
             profileModal.classList.remove('hidden');
-            await this.loadProfileData();
+            await this.loadProfileData(targetId, isOwn);
+        }
+    }
+
+    async openUserProfileModal(userId) {
+        const oldModal = document.getElementById('user-profile-view-modal');
+        if (oldModal) oldModal.remove();
+        const modal = document.createElement('div');
+        modal.id = 'user-profile-view-modal';
+        modal.className = 'profile-modal';
+        modal.innerHTML = `
+            <div class="profile-modal-content">
+                <div class="profile-modal-header">
+                    <h3>Профиль пользователя</h3>
+                    <button class="profile-modal-close" id="user-profile-close">✕</button>
+                </div>
+                <div id="user-profile-error" class="error-message hidden"></div>
+                <div class="profile-section" style="text-align: center;">
+                    <div id="user-profile-avatar" class="profile-avatar-large"></div>
+                </div>
+                <div class="profile-section">
+                    <label>Имя пользователя</label>
+                    <div id="user-profile-username" class="profile-field"></div>
+                </div>
+                <div class="profile-section">
+                    <label>О себе</label>
+                    <div id="user-profile-bio" class="profile-field"></div>
+                </div>
+                <div class="profile-actions">
+                    <button id="user-profile-close-btn" class="btn-secondary">Закрыть</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        const closeModal = () => {
+            modal.style.display = 'none';
+            modal.remove();
+            document.removeEventListener('keydown', escapeHandler);
+        };
+        const escapeHandler = (e) => {
+            if (e.key === 'Escape') closeModal();
+        };
+        document.getElementById('user-profile-close').addEventListener('click', closeModal);
+        document.getElementById('user-profile-close-btn').addEventListener('click', closeModal);
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeModal();
+        });
+        document.addEventListener('keydown', escapeHandler);
+        modal.style.display = 'flex';
+        try {
+            const response = await fetch(`/api/users/${userId}/profile`, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.error || 'Ошибка загрузки');
+            }
+            const data = await response.json();
+            document.getElementById('user-profile-username').textContent = data.username || '';
+            document.getElementById('user-profile-bio').textContent = data.bio || '—';
+            const avatarDiv = document.getElementById('user-profile-avatar');
+            if (data.avatar_url) {
+                avatarDiv.innerHTML = `<img src="${data.avatar_url}" alt="avatar" class="profile-avatar-img">`;
+            } else {
+                avatarDiv.innerHTML = `<div class="profile-avatar-placeholder">${data.username.charAt(0).toUpperCase()}</div>`;
+            }
+        } catch (err) {
+            const errorDiv = document.getElementById('user-profile-error');
+            errorDiv.textContent = err.message;
+            errorDiv.classList.remove('hidden');
         }
     }
 
@@ -84,19 +130,25 @@ class ProfileManager {
         modal.innerHTML = `
             <div class="profile-modal-content">
                 <div class="profile-modal-header">
-                    <h3>Профиль</h3>
+                    <h3>Мой профиль</h3>
                     <button class="profile-modal-close" id="profile-modal-close">✕</button>
                 </div>
                 <div id="profile-error" class="error-message hidden"></div>
 
-                <div class="profile-section">
-                    <label>Имя пользователя</label>
-                    <input type="text" id="profile-modal-username" disabled>
+                <div class="profile-section" style="text-align: center;">
+                    <div id="profile-avatar-container" class="profile-avatar-large">
+                        <img id="profile-avatar-img" src="" alt="avatar" style="display: none;">
+                        <div id="profile-avatar-placeholder"></div>
+                    </div>
+                    <label for="avatar-upload" class="btn-secondary" style="margin-top: 8px; display: inline-block;">
+                        Загрузить фото
+                    </label>
+                    <input type="file" id="avatar-upload" accept="image/png, image/jpeg, image/gif" style="display: none;">
                 </div>
 
                 <div class="profile-section">
-                    <label>Номер телефона</label>
-                    <input type="text" id="profile-modal-phone" disabled>
+                    <label>Имя пользователя</label>
+                    <input type="text" id="profile-modal-username" disabled>
                 </div>
 
                 <div class="profile-section">
@@ -105,18 +157,12 @@ class ProfileManager {
                     <div class="char-count" id="bio-char-count">0/500</div>
                 </div>
 
-                <div class="profile-section">
-                    <label>Аватар URL</label>
-                    <input type="text" id="profile-modal-avatar" placeholder="Ссылка на аватар">
-                </div>
-
                 <div class="profile-actions">
                     <button id="profile-save-btn" class="btn-primary">Сохранить</button>
                     <button id="profile-cancel-btn" class="btn-secondary">Отмена</button>
                 </div>
             </div>
         `;
-
         document.body.appendChild(modal);
         this.setupProfileModalEvents();
     }
@@ -126,19 +172,18 @@ class ProfileManager {
         const cancelBtn = document.getElementById('profile-cancel-btn');
         const saveBtn = document.getElementById('profile-save-btn');
         const bioInput = document.getElementById('profile-modal-bio');
-
+        const avatarUpload = document.getElementById('avatar-upload');
+        const avatarImg = document.getElementById('profile-avatar-img');
+        const avatarPlaceholder = document.getElementById('profile-avatar-placeholder');
         if (closeBtn) {
             closeBtn.addEventListener('click', () => this.closeProfileModal());
         }
-
         if (cancelBtn) {
             cancelBtn.addEventListener('click', () => this.closeProfileModal());
         }
-
         if (saveBtn) {
             saveBtn.addEventListener('click', () => this.saveProfile());
         }
-
         if (bioInput) {
             bioInput.addEventListener('input', (e) => {
                 const charCount = document.getElementById('bio-char-count');
@@ -147,7 +192,20 @@ class ProfileManager {
                 }
             });
         }
-
+        if (avatarUpload) {
+            avatarUpload.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    avatarImg.src = event.target.result;
+                    avatarImg.style.display = 'block';
+                    avatarPlaceholder.style.display = 'none';
+                };
+                reader.readAsDataURL(file);
+                this.uploadAvatar(file);
+            });
+        }
         document.getElementById('profile-modal')?.addEventListener('click', (e) => {
             if (e.target.id === 'profile-modal') {
                 this.closeProfileModal();
@@ -155,29 +213,63 @@ class ProfileManager {
         });
     }
 
-    async loadProfileData() {
+    async uploadAvatar(file) {
+        const formData = new FormData();
+        formData.append('avatar', file);
+        const csrfToken = document.getElementById('csrf-token').value;
         try {
-            const response = await fetch('/api/profile', {
+            const response = await fetch('/api/profile/avatar', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken
+                },
+                body: formData
+            });
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.error || 'Ошибка загрузки');
+            }
+            this.app.ui.showNotification('Аватар обновлён', false);
+            const avatarImg = document.getElementById('profile-avatar-img');
+            avatarImg.src = data.avatar_url + '?t=' + Date.now();
+            avatarImg.style.display = 'block';
+            document.getElementById('profile-avatar-placeholder').style.display = 'none';
+        } catch (err) {
+            this.app.ui.showNotification(err.message, true);
+        }
+    }
+
+    async loadProfileData(userId, isOwn) {
+        try {
+            const url = isOwn ? '/api/profile' : `/api/users/${userId}/profile`;
+            const response = await fetch(url, {
                 headers: { 'X-Requested-With': 'XMLHttpRequest' }
             });
-
             if (!response.ok) {
                 this.showProfileError('Ошибка загрузки профиля');
                 return;
             }
-
             const data = await response.json();
-
             document.getElementById('profile-modal-username').value = data.username || '';
-            document.getElementById('profile-modal-phone').value = data.phone || '';
-            document.getElementById('profile-modal-bio').value = data.bio || '';
-            document.getElementById('profile-modal-avatar').value = data.avatar_url || '';
-
-            const charCount = document.getElementById('bio-char-count');
-            if (charCount) {
-                charCount.textContent = `${(data.bio || '').length}/500`;
+            const bioField = document.getElementById('profile-modal-bio');
+            if (bioField) {
+                bioField.value = data.bio || '';
+                const charCount = document.getElementById('bio-char-count');
+                if (charCount) {
+                    charCount.textContent = `${(data.bio || '').length}/500`;
+                }
             }
-
+            const avatarImg = document.getElementById('profile-avatar-img');
+            const avatarPlaceholder = document.getElementById('profile-avatar-placeholder');
+            if (data.avatar_url) {
+                avatarImg.src = data.avatar_url;
+                avatarImg.style.display = 'block';
+                avatarPlaceholder.style.display = 'none';
+            } else {
+                avatarImg.style.display = 'none';
+                avatarPlaceholder.style.display = 'flex';
+                avatarPlaceholder.textContent = data.username.charAt(0).toUpperCase();
+            }
             this.clearProfileError();
         } catch (err) {
             this.showProfileError('Ошибка загрузки профиля');
@@ -187,16 +279,12 @@ class ProfileManager {
     async saveProfile() {
         const saveBtn = document.getElementById('profile-save-btn');
         const originalText = saveBtn?.textContent;
-
         if (saveBtn) {
             saveBtn.textContent = '⏳ Сохранение...';
             saveBtn.disabled = true;
         }
-
         try {
             const bio = document.getElementById('profile-modal-bio').value.trim();
-            const avatarUrl = document.getElementById('profile-modal-avatar').value.trim();
-
             const csrfToken = document.getElementById('csrf-token').value;
             const response = await fetch('/api/profile', {
                 method: 'PUT',
@@ -206,17 +294,14 @@ class ProfileManager {
                     'X-CSRFToken': csrfToken
                 },
                 body: JSON.stringify({
-                    bio: bio || null,
-                    avatar_url: avatarUrl || null
+                    bio: bio || null
                 })
             });
-
             if (!response.ok) {
                 this.showProfileError('Ошибка сохранения профиля');
                 return;
             }
-
-            this.app.ui.showNotification('Профиль обновлен', false);
+            this.app.ui.showNotification('Профиль обновлён', false);
             this.closeProfileModal();
         } catch (err) {
             this.showProfileError('Ошибка соединения');

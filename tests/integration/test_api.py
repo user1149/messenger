@@ -1,91 +1,29 @@
 """Интеграционные тесты для API endpoints."""
-import pytest
-from flask import Flask
-
 
 class TestAuthAPI:
-    """Тесты для API аутентификации."""
-    
-    def test_register_success(self, client):
-        """Успешная регистрация через API."""
-        response = client.post("/api/v1/auth/register", json={
-            "username": "testuser",
-            "email": "test@example.com",
-            "password": "TestPass123"
-        })
-        
-        assert response.status_code == 201
+    """Тесты для API аутентификации по телефону."""
+
+    def test_send_code_success(self, client):
+        """Успешная отправка кода по телефону."""
+        sent = {}
+
+        class DummySMSProvider:
+            def send_code(self, phone, code):
+                sent["phone"] = phone
+                sent["code"] = code
+
+        # Подменяем sms_provider в контейнере
+        with client.application.app_context():
+            container = client.application.container
+            container.auth_service.sms_provider = DummySMSProvider()
+
+        response = client.post("/api/v1/auth/send-code", json={"phone": "+79990001234"})
+
+        assert response.status_code == 200
         assert response.json["success"] is True
-    
-    def test_register_missing_fields(self, client):
-        """Регистрация без обязательных полей."""
-        response = client.post("/api/v1/auth/register", json={
-            "username": "testuser"
-            # missing email and password
-        })
-        
-        assert response.status_code == 400
-        assert "error" in response.json
-    
-    def test_register_invalid_email(self, client):
-        """Регистрация с невалидным email."""
-        response = client.post("/api/v1/auth/register", json={
-            "username": "testuser",
-            "email": "invalid-email",
-            "password": "TestPass123"
-        })
-        
-        assert response.status_code == 400
-        assert "error" in response.json
-    
-    def test_register_weak_password(self, client):
-        """Регистрация со слабым паролем."""
-        response = client.post("/api/v1/auth/register", json={
-            "username": "testuser",
-            "email": "test@example.com",
-            "password": "weak"
-        })
-        
-        assert response.status_code == 400
-        assert "error" in response.json
-    
-    def test_register_duplicate_username(self, client):
-        """Попытка регистрации с существующим username."""
-        # Первая регистрация
-        client.post("/api/v1/auth/register", json={
-            "username": "testuser",
-            "email": "test1@example.com",
-            "password": "TestPass123"
-        })
-        
-        # Вторая регистрация с тем же username
-        response = client.post("/api/v1/auth/register", json={
-            "username": "testuser",
-            "email": "test2@example.com",
-            "password": "TestPass123"
-        })
-        
-        assert response.status_code == 409
-        assert "error" in response.json
-    
-    def test_register_duplicate_email(self, client):
-        """Попытка регистрации с существующим email."""
-        # Первая регистрация
-        client.post("/api/v1/auth/register", json={
-            "username": "testuser1",
-            "email": "test@example.com",
-            "password": "TestPass123"
-        })
-        
-        # Вторая регистрация с тем же email
-        response = client.post("/api/v1/auth/register", json={
-            "username": "testuser2",
-            "email": "test@example.com",
-            "password": "TestPass123"
-        })
-        
-        assert response.status_code == 409
-        assert "error" in response.json
+        assert "masked_phone" in response.json
+        assert sent.get("phone") is not None
+
 
 
 class TestUsersAPI:

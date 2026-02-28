@@ -1,8 +1,9 @@
-// socket.js
-class SocketManager {
+// static/js/socket.js
+const SocketManager = class {
     constructor(app) {
         this.app = app;
         this.socket = null;
+        this.manualDisconnect = false;
     }
 
     connect() {
@@ -148,9 +149,16 @@ class SocketManager {
                 type: c.type,
                 lastMessage: c.lastMessage || '',
                 lastTime: c.lastTime || '',
+                avatarUrl: null
             };
         });
         this.app.chat.renderChatsList();
+
+        Object.entries(this.app.chat.chatsData).forEach(([chatId, chat]) => {
+            if (chat.type === 'private') {
+                this.app.chat.loadChatAvatar(chatId, chat.name);
+            }
+        });
 
         if (!this.app.chat.currentChatId) {
             this.app.ui.updateHeaderForNoChat();
@@ -176,9 +184,13 @@ class SocketManager {
                 type: chat.type,
                 lastMessage: '',
                 lastTime: '',
+                avatarUrl: null
             };
         }
         this.app.chat.renderChatsList();
+        if (chat.type === 'private') {
+            this.app.chat.loadChatAvatar(chat.id, chat.name);
+        }
         this.app.chat.switchChat(chat.id);
     }
 
@@ -213,12 +225,15 @@ class SocketManager {
             if (chat.type === 'private') {
                 this.app.chat.currentChatPartner = chat.name;
                 elements.chatPartnerName.textContent = this.app.chat.currentChatPartner;
+                this.app.chat.loadChatPartnerProfile(currentChatId);
             } else if (chat.type === 'group') {
                 this.app.chat.currentChatPartner = null;
                 elements.chatPartnerName.textContent = chat.name;
+                this.app.chat.clearChatHeaderAvatar();
             } else {
                 this.app.chat.currentChatPartner = null;
                 elements.chatPartnerName.textContent = 'Общий чат';
+                this.app.chat.clearChatHeaderAvatar();
             }
         }
         elements.onlineStatus.textContent = '';
@@ -292,6 +307,10 @@ class SocketManager {
     }
 
     handleDisconnect() {
+        if (this.manualDisconnect) {
+            this.manualDisconnect = false;
+            return;
+        }
         this.app.ui.showNotification('Соединение потеряно. Попытка восстановить...', false);
         this.disableInput(true);
         this.app.chat.currentTypingUsers.clear();
@@ -316,7 +335,8 @@ class SocketManager {
                 name: Utils.escapeHtml(chatInfo.name),
                 type: chatInfo.type,
                 lastMessage: '',
-                lastTime: ''
+                lastTime: '',
+                avatarUrl: null
             };
         }
         this.app.chat.renderChatsList();

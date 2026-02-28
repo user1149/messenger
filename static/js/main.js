@@ -8,6 +8,7 @@ class ChatApplication {
         this.auth = new Auth(this);
         this.chat = new Chat(this);
         this.socket = new SocketManager(this);
+        this.profile = new ProfileManager(this);
         this.init();
     }
 

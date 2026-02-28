@@ -54,11 +54,9 @@ def register_error_handlers(app: Flask) -> None:
     @app.errorhandler(404)
     def handle_not_found(e: HTTPException) -> Tuple[Any, int]:
         """Обработка 404 ошибок."""
-        from flask import request
-        # Для API запросов вернуть JSON, для веб-страниц перенаправить на логин
-        if request.path.startswith('/api/'):
+        # Для API запросов вернуть JSON, для веб-страниц перенаправить на главную
+        if request.path.startswith('/api'):
             return jsonify({"error": "Not found"}), 404
-        # Для остальных перенаправить на главную (которая затем перенаправит на логин)
         from flask import redirect, url_for
         return redirect(url_for('pages.index')), 302
     

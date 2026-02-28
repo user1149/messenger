@@ -1,5 +1,5 @@
-// ui.js
-class UI {
+// static/js/ui.js
+const UI = class {
     constructor(app) {
         this.app = app;
         this.elements = {};
@@ -19,11 +19,15 @@ class UI {
             'chats-sidebar', 'user-menu-button', 'user-popup', 'popup-username',
             'popup-logout', 'back-button', 'resizer', 'notification',
             'login-group', 'email-group', 'username-group', 'password-confirm-group',
-            'popup-create-group'
+            'popup-create-group', 'chat-avatar-img', 'chat-avatar-placeholder', 'chat-header-avatar'
         ];
         this.elements = Object.fromEntries(
             ids.map(id => [id.replace(/-([a-z])/g, (_, l) => l.toUpperCase()), document.getElementById(id)])
         );
+        if (!this.elements.userMenuButton) {
+            setTimeout(() => this.cacheDom(), 100);
+            return;
+        }
         this.ensureSidebarOverlay();
     }
 
@@ -37,18 +41,18 @@ class UI {
     }
 
     bindEvents() {
-        this.elements.userMenuButton.addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.elements.userPopup.classList.toggle('hidden');
-        });
+        if (this.elements.userMenuButton) {
+            this.elements.userMenuButton.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.elements.userPopup.classList.toggle('hidden');
+            });
+        }
         document.addEventListener('click', (e) => {
             if (!this.elements.userPopup.contains(e.target) && e.target !== this.elements.userMenuButton) {
                 this.elements.userPopup.classList.add('hidden');
             }
         });
-
         this.elements.popupLogout.addEventListener('click', () => this.app.auth.logout());
-
         if (this.elements.popupCreateGroup) {
             this.elements.popupCreateGroup.addEventListener('click', () => {
                 this.elements.userPopup.classList.add('hidden');
@@ -132,12 +136,10 @@ class UI {
     initSwipeHandlers() {
         let touchstartX = 0, touchstartY = 0;
         let touchendX = 0, touchendY = 0;
-
         document.addEventListener('touchstart', (e) => {
             touchstartX = e.changedTouches[0].screenX;
             touchstartY = e.changedTouches[0].screenY;
         });
-
         document.addEventListener('touchend', (e) => {
             touchendX = e.changedTouches[0].screenX;
             touchendY = e.changedTouches[0].screenY;
@@ -196,7 +198,6 @@ class UI {
     showEditMessageModal(messageId, currentText) {
         const oldModal = document.getElementById('edit-message-modal');
         if (oldModal) oldModal.remove();
-
         const modal = document.createElement('div');
         modal.id = 'edit-message-modal';
         modal.className = 'modal';
@@ -212,22 +213,18 @@ class UI {
             </div>
         `;
         document.body.appendChild(modal);
-
         const closeBtn = modal.querySelector('.close');
         const saveBtn = modal.querySelector('#edit-message-save');
         const cancelBtn = modal.querySelector('#edit-message-cancel');
         const input = modal.querySelector('#edit-message-input');
-
         const closeModal = () => {
             modal.style.display = 'none';
             modal.remove();
             document.removeEventListener('keydown', escapeHandler);
         };
-
         const escapeHandler = (e) => {
             if (e.key === 'Escape') closeModal();
         };
-
         closeBtn.onclick = closeModal;
         cancelBtn.onclick = closeModal;
         saveBtn.onclick = () => {
@@ -240,13 +237,10 @@ class UI {
         input.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') saveBtn.click();
         });
-
         modal.addEventListener('click', (e) => {
             if (e.target === modal) closeModal();
         });
-
         document.addEventListener('keydown', escapeHandler);
-
         modal.style.display = 'block';
         input.focus();
         input.select();
@@ -255,7 +249,6 @@ class UI {
     showDeleteConfirmModal(messageId) {
         const oldModal = document.getElementById('delete-confirm-modal');
         if (oldModal) oldModal.remove();
-
         const modal = document.createElement('div');
         modal.id = 'delete-confirm-modal';
         modal.className = 'modal';
@@ -271,41 +264,33 @@ class UI {
             </div>
         `;
         document.body.appendChild(modal);
-
         const closeBtn = modal.querySelector('.close');
         const yesBtn = modal.querySelector('#delete-confirm-yes');
         const noBtn = modal.querySelector('#delete-confirm-no');
-
         const closeModal = () => {
             modal.style.display = 'none';
             modal.remove();
             document.removeEventListener('keydown', escapeHandler);
         };
-
         const escapeHandler = (e) => {
             if (e.key === 'Escape') closeModal();
         };
-
         closeBtn.onclick = closeModal;
         noBtn.onclick = closeModal;
         yesBtn.onclick = () => {
             this.app.chat.deleteMessage(messageId);
             closeModal();
         };
-
         modal.addEventListener('click', (e) => {
             if (e.target === modal) closeModal();
         });
-
         document.addEventListener('keydown', escapeHandler);
-
         modal.style.display = 'block';
     }
 
     showCreateGroupModal() {
         const oldModal = document.getElementById('create-group-modal');
         if (oldModal) oldModal.remove();
-
         const modal = document.createElement('div');
         modal.id = 'create-group-modal';
         modal.className = 'modal';
@@ -344,7 +329,6 @@ class UI {
             </div>
         `;
         document.body.appendChild(modal);
-
         this.selectedUsers = new Map();
         this.bindGroupModalEvents(modal);
         this.showModalWithEscape(modal);
@@ -356,18 +340,14 @@ class UI {
             modal.remove();
             document.removeEventListener('keydown', escapeHandler);
         };
-
         const escapeHandler = (e) => {
             if (e.key === 'Escape') closeModal();
         };
-
         const closeBtn = modal.querySelector('.close');
         if (closeBtn) closeBtn.onclick = closeModal;
-
         modal.addEventListener('click', (e) => {
             if (e.target === modal) closeModal();
         });
-
         document.addEventListener('keydown', escapeHandler);
         modal.style.display = 'block';
     }
@@ -384,15 +364,12 @@ class UI {
         const step1 = modal.querySelector('#group-step-1');
         const step2 = modal.querySelector('#group-step-2');
         const steps = modal.querySelectorAll('.step');
-
         if (!this.selectedUsers) {
             this.selectedUsers = new Map();
         }
-
         const updateNextButton = () => {
             nextBtn.disabled = this.selectedUsers.size === 0;
         };
-
         const goToStep = (step) => {
             if (step === 1) {
                 step1.classList.remove('hidden');
@@ -407,10 +384,8 @@ class UI {
                 createBtn.disabled = !nameInput.value.trim();
             }
         };
-
         nextBtn.addEventListener('click', () => goToStep(2));
         backBtn.addEventListener('click', () => goToStep(1));
-
         const addUserChip = (id, username) => {
             const chip = document.createElement('span');
             chip.className = 'user-chip';
@@ -428,7 +403,6 @@ class UI {
             });
             selectedDiv.appendChild(chip);
         };
-
         searchInput.addEventListener('input', Utils.debounce(async (e) => {
             const query = e.target.value.trim();
             if (query.length < 2) {
@@ -452,7 +426,6 @@ class UI {
                     </div>
                 `).join('');
                 resultsDiv.classList.add('show');
-
                 resultsDiv.querySelectorAll('.result-item').forEach(item => {
                     item.addEventListener('click', () => {
                         const id = parseInt(item.dataset.id);
@@ -471,11 +444,9 @@ class UI {
                 this.app.ui.showNotification('Ошибка поиска пользователей', true);
             }
         }, 300));
-
         nameInput.addEventListener('input', () => {
             createBtn.disabled = !nameInput.value.trim();
         });
-
         createBtn.addEventListener('click', () => {
             const name = nameInput.value.trim();
             const description = descInput.value.trim();
@@ -485,7 +456,6 @@ class UI {
             modal.remove();
             document.removeEventListener('keydown', escapeHandler);
         });
-
         document.addEventListener('click', (e) => {
             if (!modal.contains(e.target) || (!searchInput.contains(e.target) && !resultsDiv.contains(e.target))) {
                 resultsDiv.classList.remove('show');
@@ -496,12 +466,10 @@ class UI {
     showGroupInfoModal(info) {
         const oldModal = document.getElementById('group-info-modal');
         if (oldModal) oldModal.remove();
-
         const modal = document.createElement('div');
         modal.id = 'group-info-modal';
         modal.className = 'modal';
         document.body.appendChild(modal);
-
         const membersHtml = info.members.map(m => `
             <div class="member-item" data-id="${m.id}">
                 <span>${Utils.escapeHtml(m.username)} ${m.is_creator ? '(создатель)' : ''}</span>
@@ -509,7 +477,6 @@ class UI {
                     `<button class="remove-member-btn">Удалить</button>` : ''}
             </div>
         `).join('');
-
         modal.innerHTML = `
             <div class="modal-content">
                 <span class="close">&times;</span>
@@ -526,9 +493,7 @@ class UI {
                 <button id="leave-group-btn">Покинуть группу</button>
             </div>
         `;
-
         this.showModalWithEscape(modal);
-
         if (info.created_by === this.app.currentUserId) {
             const searchInput = modal.querySelector('#group-info-search');
             const resultsDiv = modal.querySelector('#group-info-results');
@@ -556,7 +521,6 @@ class UI {
                 }
             }, 300));
         }
-
         modal.querySelectorAll('.remove-member-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const memberId = parseInt(e.target.closest('.member-item').dataset.id);
@@ -565,7 +529,6 @@ class UI {
                 }
             });
         });
-
         const leaveBtn = modal.querySelector('#leave-group-btn');
         leaveBtn.addEventListener('click', () => {
             modal.style.display = 'none';

@@ -282,6 +282,7 @@ class Auth {
             });
             if (response.ok) {
                 if (this.app?.socket?.socket) {
+                    this.app.socket.manualDisconnect = true;
                     this.app.socket.socket.disconnect();
                 }
                 if (this.app?.ui?.closeSidebar) {
