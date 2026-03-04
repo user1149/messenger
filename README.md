@@ -72,4 +72,3 @@ Key environment variables (see `.env.example` for all options):
 ## License
 
 [MIT](LICENSE)
-```
