@@ -1,6 +1,6 @@
 # Messenger App
 
-Real‑time messaging application with phone authentication, private and group chats, and live message delivery.  
+Real‑time messaging application, private and group chats, and live message delivery.  
 Built as a modular component of a larger system.
 
 ---
