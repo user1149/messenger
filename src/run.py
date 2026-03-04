@@ -1,42 +1,63 @@
-"""Точка входа приложения для запуска сервера."""
+"""Точка входа для запуска сервера мессенджера."""
 import argparse
+import logging
+import sys
 
 from app import create_app
 from app.extensions import socketio
 
 
 def parse_args():
-    """Парсинг командной строки аргументов."""
-    import os
-    parser = argparse.ArgumentParser(description="Run messenger app")
-    parser.add_argument(
-        "--debug",
-        "-d",
-        action="store_true",
-        help="Enable debug mode"
-    )
-    parser.add_argument(
-        "--host",
-        default=os.getenv("HOST", "127.0.0.1"),
-        help="Host to run on"
-    )
-    parser.add_argument(
-        "--port",
-        type=int,
-        default=int(os.getenv("PORT", "5000")),
-        help="Port to run on"
-    )
+    parser = argparse.ArgumentParser(description="Запуск сервера мессенджера")
+    parser.add_argument("-d", "--debug", action="store_true", help="Режим отладки")
+    parser.add_argument("--host", default="127.0.0.1", help="Хост (по умолч. 127.0.0.1)")
+    parser.add_argument("--port", type=int, default=5000, help="Порт (по умолч. 5000)")
+    parser.add_argument("--unsafe", action="store_true", help="Разрешить Werkzeug в production")
     return parser.parse_args()
 
 
-if __name__ == "__main__":
-    app = create_app()
-    args = parse_args()
-    socketio.run(
-        app,
-        debug=args.debug,
-        host=args.host,
-        port=args.port,
-        allow_unsafe_werkzeug=True
-    )
+def setup_logging(debug):
+    level = logging.DEBUG if debug else logging.INFO
+    logging.basicConfig(level=level, format="%(asctime)s [%(levelname)s] %(message)s")
 
+
+def get_async_mode():
+    try:
+        import eventlet
+        return "eventlet"
+    except ImportError:
+        try:
+            import gevent
+            return "gevent"
+        except ImportError:
+            return "threading"
+
+
+def main():
+    args = parse_args()
+    setup_logging(args.debug)
+
+    app = create_app()
+    async_mode = get_async_mode()
+
+    app.logger.info("=" * 40)
+    app.logger.info(f"Запуск на {args.host}:{args.port} (debug={args.debug})")
+    app.logger.info(f"Async mode: {async_mode}")
+    app.logger.info("=" * 40)
+
+    try:
+        socketio.run(
+            app,
+            host=args.host,
+            port=args.port,
+            debug=args.debug,
+            allow_unsafe_werkzeug=args.unsafe,
+            async_mode=async_mode,
+        )
+    except (OSError, KeyboardInterrupt) as e:
+        app.logger.error(f"Остановка: {e}")
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
