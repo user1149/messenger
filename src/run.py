@@ -1,11 +1,13 @@
-"""Точка входа для запуска сервера мессенджера."""
+"""Точка входа для запуска."""
 import argparse
 import logging
 import sys
+import os
+
+sys.path.insert(0, os.path.dirname(__file__))
 
 from app import create_app
 from app.extensions import socketio
-
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Запуск сервера мессенджера")
@@ -21,29 +23,11 @@ def setup_logging(debug):
     logging.basicConfig(level=level, format="%(asctime)s [%(levelname)s] %(message)s")
 
 
-def get_async_mode():
-    try:
-        import eventlet
-        return "eventlet"
-    except ImportError:
-        try:
-            import gevent
-            return "gevent"
-        except ImportError:
-            return "threading"
-
-
 def main():
     args = parse_args()
     setup_logging(args.debug)
 
     app = create_app()
-    async_mode = get_async_mode()
-
-    app.logger.info("=" * 40)
-    app.logger.info(f"Запуск на {args.host}:{args.port} (debug={args.debug})")
-    app.logger.info(f"Async mode: {async_mode}")
-    app.logger.info("=" * 40)
 
     try:
         socketio.run(
@@ -52,7 +36,6 @@ def main():
             port=args.port,
             debug=args.debug,
             allow_unsafe_werkzeug=args.unsafe,
-            async_mode=async_mode,
         )
     except (OSError, KeyboardInterrupt) as e:
         app.logger.error(f"Остановка: {e}")
