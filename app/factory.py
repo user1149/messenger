@@ -7,12 +7,27 @@ from typing import Optional
 from flask import Flask, jsonify, request, redirect, url_for
 
 from app.models.user import User
-from config import DevelopmentConfig, ProductionConfig, TestingConfig
+from app.config import DevelopmentConfig, ProductionConfig, TestingConfig
 from app.extensions import db, login_manager, socketio, csrf
 from app.di import Container
-from app.middleware import register_error_handlers, register_cors_headers
-from app.logging import init_logging
+from app.utils.logging import init_logging
 from app.socket import register_socket_handlers
+from app.exceptions.auth_errors import (
+    UserNotFoundError,
+    UsernameAlreadyExistsError,
+    RateLimitExceededError,
+    ValidationError,
+    PhoneAlreadyExistsError,
+    InvalidCodeError,
+    CodeExpiredError,
+    InvalidCredentialsError
+)
+from app.exceptions.chat_errors import (
+    ChatNotFoundError,
+    AccessDeniedError,
+    MessageNotFoundError,
+    MessageEditTimeExpiredError
+)
 
 
 def create_app(config_object: Optional[object] = None) -> Flask:
@@ -94,8 +109,8 @@ def create_app(config_object: Optional[object] = None) -> Flask:
     register_socket_handlers(socketio, app.container)
 
     # Регистрация обработчиков ошибок и CORS
-    register_error_handlers(app)
-    register_cors_headers(app)
+    register_custom_error_handlers(app)
+    register_cors(app)
 
     # Инициализация базы данных (удобно для dev/testing; для prod лучше миграции)
     if app.debug or app.testing:
@@ -103,4 +118,71 @@ def create_app(config_object: Optional[object] = None) -> Flask:
             db.create_all()
 
     return app
+
+def register_custom_error_handlers(app: Flask):
+    """Регистрация обработчиков для кастомных исключений."""
+    @app.errorhandler(UserNotFoundError)
+    def handle_user_not_found(error):
+        return jsonify({"error": str(error)}), 404
+
+    @app.errorhandler(UsernameAlreadyExistsError)
+    def handle_username_already_exists(error):
+        return jsonify({"error": str(error)}), 400
+
+    @app.errorhandler(RateLimitExceededError)
+    def handle_rate_limit_exceeded(error):
+        return jsonify({"error": str(error)}), 429
+
+    @app.errorhandler(ValidationError)
+    def handle_validation_error(error):
+        return jsonify({"error": str(error)}), 400
+
+    @app.errorhandler(PhoneAlreadyExistsError)
+    def handle_phone_already_exists(error):
+        return jsonify({"error": str(error)}), 400
+
+    @app.errorhandler(InvalidCodeError)
+    def handle_invalid_code(error):
+        return jsonify({"error": str(error)}), 400
+
+    @app.errorhandler(CodeExpiredError)
+    def handle_code_expired(error):
+        return jsonify({"error": str(error)}), 400
+
+    @app.errorhandler(InvalidCredentialsError)
+    def handle_invalid_credentials(error):
+        return jsonify({"error": str(error)}), 401
+
+    @app.errorhandler(ChatNotFoundError)
+    def handle_chat_not_found(error):
+        return jsonify({"error": str(error)}), 404
+
+    @app.errorhandler(AccessDeniedError)
+    def handle_access_denied(error):
+        return jsonify({"error": str(error)}), 403
+
+    @app.errorhandler(MessageNotFoundError)
+    def handle_message_not_found(error):
+        return jsonify({"error": str(error)}), 404
+
+    @app.errorhandler(MessageEditTimeExpiredError)
+    def handle_message_edit_time_expired(error):
+        return jsonify({"error": str(error)}), 400
+
+    @app.errorhandler(404)
+    def handle_not_found(error):
+        return jsonify({"error": "Not found"}), 404
+
+    @app.errorhandler(500)
+    def handle_internal_error(error):
+        return jsonify({"error": "Internal server error"}), 500
+
+def register_cors(app: Flask):
+    """Настройка CORS для Flask-приложения."""
+    @app.after_request
+    def after_request(response):
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+        response.headers.add('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS')
+        return response
 

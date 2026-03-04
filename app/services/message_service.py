@@ -10,7 +10,7 @@ from app.exceptions.chat_errors import (
 )
 from app.utils.constants import MessageEditWindow
 from app.utils.validators import validate_message_text, escape_html
-from app.logging import log_message_deleted, log_message_edited
+from app.utils.logging import log_message_deleted, log_message_edited
 from app.models import LastRead
 
 class MessageService:
@@ -48,6 +48,7 @@ class MessageService:
         return {
             'id': message.id,
             'nickname': user.username,
+            'avatar_url': user.avatar_url,
             'text': message.text,
             'timestamp': message.timestamp.isoformat(),
             'chat_id': chat_id,

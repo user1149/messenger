@@ -472,6 +472,7 @@ const UI = class {
         document.body.appendChild(modal);
         const membersHtml = info.members.map(m => `
             <div class="member-item" data-id="${m.id}">
+                <span class="member-avatar">${m.avatar_url ? `<img src="${m.avatar_url}" class="member-avatar-img" alt="avatar">` : m.username.charAt(0).toUpperCase()}</span>
                 <span>${Utils.escapeHtml(m.username)} ${m.is_creator ? '(создатель)' : ''}</span>
                 ${this.app.currentUsername !== m.username && info.created_by === this.app.currentUserId ?
                     `<button class="remove-member-btn">Удалить</button>` : ''}

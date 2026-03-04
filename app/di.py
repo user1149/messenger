@@ -1,5 +1,5 @@
 """Контейнер зависимостей приложения."""
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 from sqlalchemy.orm import Session
 from redis import Redis
 
@@ -21,7 +21,7 @@ from app.services import (
 
 class Container:
     """DI контейнер с управлением всеми зависимостями."""
-    
+
     def __init__(self, db_session: Session, redis_client: Redis, config: Dict[str, Any]) -> None:
         self.db_session = db_session
         self.redis_client = redis_client
@@ -69,4 +69,3 @@ class Container:
             message_repo=self.message_repo,
             redis_client=self.redis_client
         )
-

@@ -18,7 +18,7 @@ from app.repositories.user_repository import UserRepository
 from app.models.user import User
 from app.utils.constants import ValidationRules
 from app.utils.validators import validate_username
-from app.logging import log_user_registered, log_user_login, log_failed_login, log_rate_limit_exceeded
+from app.utils.logging import log_user_registered, log_user_login, log_failed_login, log_rate_limit_exceeded
 
 class AuthService:
     def __init__(

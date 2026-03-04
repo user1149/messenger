@@ -133,7 +133,7 @@ const Chat = class {
         if (msg.is_deleted) {
             msgDiv.classList.add('deleted');
             const avatarHtml = !isOwn && isGroupChat && shouldShowNick ?
-                `<div class="avatar" data-user-id="${msg.user_id}">${safeNick.charAt(0).toUpperCase()}</div>` : '';
+                `<div class="avatar" data-user-id="${msg.user_id}">${msg.avatar_url ? `<img src="${msg.avatar_url}" class="message-avatar-img" alt="avatar">` : safeNick.charAt(0).toUpperCase()}</div>` : '';
             const showNick = !isOwn && isGroupChat && shouldShowNick;
             const nicknameHtml = showNick ? `<div class="message-nickname"><span class="clickable-nickname" data-user-id="${msg.user_id}">${safeNick}</span></div>` : '';
             msgDiv.innerHTML = `
@@ -153,7 +153,7 @@ const Chat = class {
             return;
         }
         const avatarHtml = !isOwn && isGroupChat && shouldShowNick ?
-            `<div class="avatar" data-user-id="${msg.user_id}">${safeNick.charAt(0).toUpperCase()}</div>` : '';
+            `<div class="avatar" data-user-id="${msg.user_id}">${msg.avatar_url ? `<img src="${msg.avatar_url}" class="message-avatar-img" alt="avatar">` : safeNick.charAt(0).toUpperCase()}</div>` : '';
         const showNick = !isOwn && isGroupChat && shouldShowNick;
         const nicknameHtml = showNick ? `<div class="message-nickname"><span class="clickable-nickname" data-user-id="${msg.user_id}">${safeNick}</span></div>` : '';
         const editedHtml = msg.edited ?

@@ -102,7 +102,7 @@ class GroupService:
             return None
 
         participants = self.chat_repo.get_participants(chat_id)
-        members = [{'id': u.id, 'username': u.username, 'is_creator': (u.id == chat.created_by)} for u in participants]
+        members = [{'id': u.id, 'username': u.username, 'avatar_url': u.avatar_url, 'is_creator': (u.id == chat.created_by)} for u in participants]
 
         return {
             'id': chat.id,

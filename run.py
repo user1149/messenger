@@ -36,6 +36,7 @@ if __name__ == "__main__":
         app,
         debug=args.debug,
         host=args.host,
-        port=args.port
+        port=args.port,
+        allow_unsafe_werkzeug=True
     )
 

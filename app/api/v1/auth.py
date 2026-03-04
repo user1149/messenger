@@ -16,7 +16,7 @@ from app.exceptions.auth_errors import (
     RateLimitExceededError
 )
 from app.models.user import User
-from app.logging import log_user_login, log_user_logout
+from app.utils.logging import log_user_login, log_user_logout
 
 
 bp = Blueprint("api_v1_auth", __name__, url_prefix="/api/v1/auth")
