@@ -37,7 +37,13 @@ Installation
    cp .env.example .env
    Edit .env if needed (see Configuration below).
 
-5. Run the application
+5. Start Redis server (if not already running)
+   - Using Docker:
+     `docker run --name redis -p 6379:6379 -d redis`
+   - Using local installation:
+     `redis-server`
+
+6. Run the application
    python run.py
 
 The app will be available at http://localhost:5000.
