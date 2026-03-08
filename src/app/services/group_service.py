@@ -29,10 +29,6 @@ class GroupService:
         if len(users) != len(member_ids):
             raise UserNotFoundError("Некоторые пользователи не найдены")
 
-        for user in users:
-            if not user.confirmed:
-                raise ValidationError(f"Пользователь {user.username} не подтвердил аккаунт")
-
         chat = self.chat_repo.create_group(name, creator_id, description)
         for user_id in member_ids:
             self.chat_repo.add_participant(user_id, chat.id)
@@ -74,14 +70,12 @@ class GroupService:
             raise ChatNotFoundError("Группа не найдена")
 
         if user_id == remover_id:
-            # Выход из группы
             if not self.chat_repo.user_in_chat(remover_id, chat_id):
                 raise AccessDeniedError("Вы не участник этой группы")
             self.chat_repo.remove_participant(remover_id, chat_id)
             self.chat_repo.session.commit()
             return {"chat_id": chat_id, "user_id": remover_id, "left": True}
 
-        # Удаление другого пользователя
         if not self.chat_repo.is_group_creator(remover_id, chat_id):
             raise AccessDeniedError("Только создатель может удалять пользователей")
 
@@ -120,15 +114,13 @@ class GroupService:
             raise UserNotFoundError("Пользователь не найден")
         if other_user.id == current_user_id:
             raise ValidationError("Нельзя составить чат с собой")
-        if not other_user.confirmed:
-            raise ValidationError("Пользователь не подтвердил аккаунт")
 
         chat, created = self.chat_repo.get_or_create_private_chat(current_user_id, other_user.id)
         if not chat:
             raise ChatNotFoundError("Ошибка создания чата")
 
-        self.chat_repo.session.commit()  # коммитим создание
+        self.chat_repo.session.commit()
 
         chat_info = {'id': chat.id, 'name': other_user.username, 'type': 'private'}
-        other_dto = {'id': other_user.id, 'username': other_user.username, 'confirmed': other_user.confirmed} if created else None
+        other_dto = {'id': other_user.id, 'username': other_user.username} if created else None
         return chat_info, other_dto

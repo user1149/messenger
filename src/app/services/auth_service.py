@@ -68,7 +68,6 @@ class AuthService:
         return {
             "id": user.id,
             "username": user.username,
-            "confirmed": user.confirmed
         }
 
     def login(self, username: str, password: str, ip: Optional[str] = None) -> Dict[str, Any]:

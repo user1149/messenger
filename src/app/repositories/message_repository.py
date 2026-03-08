@@ -24,7 +24,7 @@ class MessageRepository(BaseRepository):
 
     def get_chat_history(self, chat_id: str, limit: int = 100, offset: int = 0) -> List[Message]:
         return self.session.query(Message).filter_by(chat_id=chat_id).options(
-            joinedload(Message.user_id)
+            joinedload(Message.user)
         ).order_by(Message.timestamp.desc()).limit(limit).offset(offset).all()
 
     def count_unread_for_user(self, user_id: int, chat_ids: list, redis_client=None) -> dict:
