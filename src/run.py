@@ -16,7 +16,6 @@ def parse_args():
     parser.add_argument("--host", default="127.0.0.1", help="Host (default: 127.0.0.1)")
     parser.add_argument("--port", type=int, default=5000, help="Port (default: 5000)")
     parser.add_argument("--unsafe", action="store_true", help="Allow Werkzeug in production")
-    parser.add_argument("--skip-redis-check", action="store_true", help="Skip Redis availability check")
     return parser.parse_args()
 
 
@@ -25,10 +24,7 @@ def setup_logging(debug):
     logging.basicConfig(level=level, format="%(asctime)s [%(levelname)s] %(message)s")
 
 
-def check_redis(app, skip_check=False):
-    if skip_check:
-        app.logger.info("Redis check skipped.")
-        return
+def check_redis(app):
 
     redis_url = app.config.get('REDIS_URL', 'redis://localhost:6379/0')
 
@@ -38,17 +34,14 @@ def check_redis(app, skip_check=False):
         app.logger.info("Redis is available.")
     except (redis.ConnectionError, redis.TimeoutError, redis.RedisError) as e:
         app.logger.error(f"Redis is NOT available: {e}")
-        app.logger.error("Make sure Redis is running, or use --skip-redis-check to bypass this check.")
         sys.exit(1)
 
 
 def main():
+    app = create_app()
     args = parse_args()
     setup_logging(args.debug)
-
-    app = create_app()
-
-    check_redis(app, skip_check=args.skip_redis_check)
+    check_redis(app)
 
     try:
         socketio.run(
