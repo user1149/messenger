@@ -2,7 +2,7 @@ from flask import Blueprint, request, jsonify, current_app
 from flask_login import login_required, current_user
 
 from app.core.utils.decorators import handle_errors
-from app.core.utils.validators import allowed_file
+from app.core.utils.validators import allowed_file, validate_image_content
 from .services import UserService, ProfileService
 
 import os
@@ -32,10 +32,18 @@ def get_user(user_id):
     user = user_service.get_user_by_id(user_id)
     if not user:
         return jsonify({"error": "User not found"}), 404
-    # Если не свой и не подтверждён – 404 (если нужно подтверждение, иначе убрать)
     if user_id != current_user.id and not user.get('confirmed', True):
         return jsonify({"error": "User not found"}), 404
     return jsonify(user), 200
+
+
+@bp.route('/<int:user_id>/profile', methods=['GET'])
+@login_required
+@handle_errors
+def get_user_profile(user_id):
+    profile_service: ProfileService = current_app.container.profile_service
+    profile = profile_service.get_profile_by_id(current_user.id, user_id)
+    return jsonify(profile), 200
 
 
 @bp.route('/by-username/<username>', methods=['GET'])
@@ -45,7 +53,11 @@ def get_user_by_username(username):
     user = user_repo.get_by_username(username)
     if not user:
         return jsonify({"error": "User not found"}), 404
-    return jsonify({"id": user.id, "username": user.username}), 200
+    return jsonify({
+        "id": user.id,
+        "username": user.username,
+        "avatar_url": user.avatar_url,
+    }), 200
 
 
 @profile_bp.route('', methods=['GET'])
@@ -75,15 +87,19 @@ def upload_avatar():
         return jsonify({"error": "No file provided"}), 400
 
     file = request.files['avatar']
-    if file.filename == '':
+    original_filename = file.filename or ''
+    if original_filename == '':
         return jsonify({"error": "Empty filename"}), 400
 
-    if not allowed_file(file.filename):
+    if not allowed_file(original_filename):
         return jsonify({"error": "File type not allowed"}), 400
 
-    ext = file.filename.rsplit('.', 1)[1].lower()
+    if not validate_image_content(file):
+        return jsonify({"error": "Invalid image content"}), 400
+
+    ext = original_filename.rsplit('.', 1)[1].lower()
     filename = f"{uuid.uuid4().hex}.{ext}"
-    upload_folder = os.path.join(current_app.static_folder, 'uploads')
+    upload_folder = os.path.join(current_app.static_folder or 'static', 'uploads')
     os.makedirs(upload_folder, exist_ok=True)
     file_path = os.path.join(upload_folder, filename)
     file.save(file_path)

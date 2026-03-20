@@ -1,5 +1,5 @@
 from typing import Dict, List, Any
-from datetime import datetime, timedelta
+from datetime import timedelta
 from redis import Redis
 from app.modules.users.repositories import UserRepository
 from app.modules.messages.repositories import MessageRepository, LastReadRepository
@@ -11,6 +11,7 @@ from app.core.exceptions.chat_errors import (
 )
 from app.core.utils.constants import MessageEditWindow
 from app.core.utils.validators import validate_message_text, escape_html
+from app.core.utils.helpers import utcnow
 from app.core.logging import log_message_deleted, log_message_edited
 from app.models.last_read import LastRead
 
@@ -47,10 +48,12 @@ class MessageService:
         message = self.message_repo.create(chat_id, user_id, safe_text)
         self.message_repo.session.commit()
         user = self.user_repo.get_by_id(user_id)
+        username = user.username if user else ''
+        avatar_url = user.avatar_url if user else None
         return {
             'id': message.id,
-            'nickname': user.username,
-            'avatar_url': user.avatar_url,
+            'nickname': username,
+            'avatar_url': avatar_url,
             'text': message.text,
             'timestamp': message.timestamp.isoformat(),
             'chat_id': chat_id,
@@ -107,7 +110,7 @@ class MessageService:
             raise MessageNotFoundError()
         if message.user_id != user_id:
             raise AccessDeniedError("Вы не можете удалить сообщение другого пользователя")
-        if datetime.utcnow() - message.timestamp > timedelta(seconds=MessageEditWindow.SECONDS):
+        if utcnow() - message.timestamp > timedelta(seconds=MessageEditWindow.SECONDS):
             raise MessageEditTimeExpiredError("Сообщения можно удалять только в течение 5 минут")
         success = self.message_repo.delete_message(message_id)
         if not success:
@@ -126,7 +129,7 @@ class MessageService:
             raise MessageNotFoundError()
         if message.user_id != user_id:
             raise AccessDeniedError("Вы не можете редактировать сообщение другого пользователя")
-        if datetime.utcnow() - message.timestamp > timedelta(seconds=MessageEditWindow.SECONDS):
+        if utcnow() - message.timestamp > timedelta(seconds=MessageEditWindow.SECONDS):
             raise MessageEditTimeExpiredError("Сообщения можно редактировать только в течение 5 минут")
         safe_text = escape_html(new_text)
         edited = self.message_repo.edit_message(message_id, safe_text)
@@ -135,9 +138,10 @@ class MessageService:
         self.message_repo.session.commit()
         user = self.user_repo.get_by_id(user_id)
         log_message_edited(user_id, message_id, chat_id, user.username if user else "unknown")
+        username = user.username if user else ''
         return {
             'id': edited.id,
-            'nickname': user.username,
+            'nickname': username,
             'text': edited.text,
             'timestamp': edited.timestamp.isoformat(),
             'edited_at': edited.edited_at.isoformat() if edited.edited_at else None,

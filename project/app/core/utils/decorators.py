@@ -6,7 +6,6 @@ from flask_login import current_user
 
 
 def handle_errors(f: Callable) -> Callable:
-    """Decorator для обработки исключений."""
     @wraps(f)
     def wrapper(*args: Any, **kwargs: Any) -> Any:
         try:
@@ -42,7 +41,6 @@ def handle_errors(f: Callable) -> Callable:
 
 
 def rate_limit_action(action: str) -> Callable:
-    """Decorator для rate limiting на API endpoints."""
     def decorator(f: Callable) -> Callable:
         @wraps(f)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
@@ -56,14 +54,29 @@ def rate_limit_action(action: str) -> Callable:
     return decorator
 
 
-def socket_authenticated(f):
-    """Decorator для socket events, проверяющий аутентификацию."""
+def socket_authenticated(f: Callable) -> Callable:
     @wraps(f)
-    def wrapped(*args, **kwargs):
+    def wrapped(*args: Any, **kwargs: Any) -> Any:
         from flask_login import current_user
         if not current_user.is_authenticated:
             from flask_socketio import emit
             emit('error', {'message': 'Authentication required'})
             return
         return f(*args, **kwargs)
+    return wrapped
+
+
+def socket_handle_errors(f: Callable) -> Callable:
+    @wraps(f)
+    def wrapped(*args: Any, **kwargs: Any) -> Any:
+        try:
+            return f(*args, **kwargs)
+        except Exception as e:
+            from app.core.exceptions.base import AppError
+            from flask_socketio import emit
+            current_app.logger.exception(f"Socket error in {f.__name__}")
+            if isinstance(e, AppError):
+                emit('error', {'message': str(e)})
+            else:
+                emit('error', {'message': 'Internal server error'})
     return wrapped

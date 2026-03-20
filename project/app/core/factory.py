@@ -37,7 +37,6 @@ from app.core.exceptions.chat_errors import (
 
 
 def create_app(config_object: Optional[object] = None) -> Flask:
-    """Создание и конфигурирование Flask приложения."""
     app = Flask(
         __name__,
         template_folder="../../templates",
@@ -55,6 +54,10 @@ def create_app(config_object: Optional[object] = None) -> Flask:
 
     app.config.from_object(config_object)
     app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024
+
+    if not app.debug and not app.testing:
+        if not os.getenv("SECRET_KEY"):
+            raise RuntimeError("SECRET_KEY environment variable must be set in production")
 
     init_logging(app)
 
@@ -96,7 +99,6 @@ def create_app(config_object: Optional[object] = None) -> Flask:
     app.register_blueprint(users_bp)
     app.register_blueprint(profile_bp)
 
-
     socketio.init_app(
         app,
         cors_allowed_origins=app.config["CORS_ORIGINS"],
@@ -116,7 +118,6 @@ def create_app(config_object: Optional[object] = None) -> Flask:
 
 
 def register_custom_error_handlers(app: Flask):
-    """Регистрация обработчиков для кастомных исключений."""
     @app.errorhandler(UserNotFoundError)
     def handle_user_not_found(error):
         return jsonify({"error": str(error)}), 404
@@ -175,10 +176,14 @@ def register_custom_error_handlers(app: Flask):
 
 
 def register_cors(app: Flask):
-    """Настройка CORS для Flask-приложения."""
+    allowed_origins = set(app.config.get("CORS_ORIGINS", []))
+
     @app.after_request
     def after_request(response):
-        response.headers.add('Access-Control-Allow-Origin', '*')
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-        response.headers.add('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS')
+        origin = request.headers.get("Origin", "")
+        if origin and origin in allowed_origins:
+            response.headers.set("Access-Control-Allow-Origin", origin)
+            response.headers.set("Access-Control-Allow-Headers", "Content-Type,Authorization,X-CSRFToken")
+            response.headers.set("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS")
+            response.headers.add("Vary", "Origin")
         return response

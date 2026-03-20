@@ -6,28 +6,29 @@ load_dotenv()
 
 basedir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 
+
 class BaseConfig:
-    """Базовая конфигурация, общая для всех окружений."""
     default_db_path = os.path.join(basedir, 'instance', 'messenger.db')
-    SQLALCHEMY_DATABASE_URI = os.getenv(
-        "DATABASE_URL",
-        f"sqlite:///{default_db_path}"
-    )
+    SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL", f"sqlite:///{default_db_path}")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    SQLALCHEMY_ENGINE_OPTIONS = {
-        "pool_size": 10,
-        "pool_recycle": 3600,
-        "pool_pre_ping": True,
-        "connect_args": (
-            {"check_same_thread": False}
-            if "sqlite" in (os.getenv("DATABASE_URL", "sqlite:///instance/messenger.db"))
-            else {}
-        ),
-    }
 
-    SECRET_KEY = os.getenv("SECRET_KEY") or "none"
+    _is_sqlite = "sqlite" in SQLALCHEMY_DATABASE_URI.lower()
 
-    BASE_URL = os.getenv("BASE_URL") or "http://localhost:5000"
+    if _is_sqlite:
+        SQLALCHEMY_ENGINE_OPTIONS = {
+            "connect_args": {"check_same_thread": False},
+        }
+    else:
+        SQLALCHEMY_ENGINE_OPTIONS = {
+            "pool_size": 10,
+            "pool_recycle": 3600,
+            "pool_pre_ping": True,
+            "connect_args": {},
+        }
+
+    SECRET_KEY = os.getenv("SECRET_KEY", "dev-insecure-key-change-in-production")
+
+    BASE_URL = os.getenv("BASE_URL", "http://localhost:5000")
 
     REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 
@@ -55,8 +56,6 @@ class BaseConfig:
 
 
 class DevelopmentConfig(BaseConfig):
-    """Конфигурация для разработки."""
-
     DEBUG = True
     TESTING = False
     SESSION_COOKIE_SECURE = False
@@ -70,8 +69,6 @@ class DevelopmentConfig(BaseConfig):
 
 
 class TestingConfig(BaseConfig):
-    """Конфигурация для тестирования."""
-
     DEBUG = False
     TESTING = True
 
@@ -87,8 +84,6 @@ class TestingConfig(BaseConfig):
 
 
 class ProductionConfig(BaseConfig):
-    """Конфигурация для продакшена."""
-
     DEBUG = False
     TESTING = False
     SESSION_COOKIE_SECURE = True

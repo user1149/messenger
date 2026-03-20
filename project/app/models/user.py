@@ -1,7 +1,7 @@
-from datetime import datetime
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from app.core.extensions import db
+from app.core.utils.helpers import utcnow
 
 
 class User(UserMixin, db.Model):
@@ -15,9 +15,8 @@ class User(UserMixin, db.Model):
     avatar_url = db.Column(db.String(255), nullable=True)
     profile_completed = db.Column(db.Boolean, default=False)
 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utcnow)
 
-    # Отношения
     messages = db.relationship('Message', backref='user', cascade='all, delete-orphan', lazy='select')
     chat_participants = db.relationship('ChatParticipant', backref='user', cascade='all, delete-orphan', lazy='select')
     last_reads = db.relationship('LastRead', backref='user', cascade='all, delete-orphan', lazy='select')

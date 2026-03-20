@@ -3,7 +3,6 @@ from redis import Redis
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from app.core.exceptions.auth_errors import (
-    UserNotFoundError,
     UsernameAlreadyExistsError,
     RateLimitExceededError,
     ValidationError,
@@ -17,7 +16,6 @@ from app.core.logging import log_user_registered, log_user_login, log_failed_log
 
 
 class AuthService:
-    """Service for authentication and user management (username/password only)."""
 
     def __init__(
         self,
@@ -30,23 +28,15 @@ class AuthService:
         self.config = config
 
     def _check_rate_limit(self, key: str, max_attempts: int, period: int) -> None:
-        """Increment rate limit counter; raise if exceeded."""
-        current = self.redis.get(key)
-        try:
-            current_int = int(current) if current is not None else 0
-        except (TypeError, ValueError):
-            current_int = 0
-
-        if current_int >= max_attempts:
-            raise RateLimitExceededError("Too many attempts")
-
         pipe = self.redis.pipeline()
         pipe.incr(key)
         pipe.expire(key, period)
-        pipe.execute()
+        results = pipe.execute()
+        current = results[0]
+        if current and current > max_attempts:
+            raise RateLimitExceededError("Too many attempts")
 
     def register(self, username: str, password: str, ip: Optional[str] = None) -> Dict[str, Any]:
-        """Register new user with username and password."""
         if username.lower() in ValidationRules.RESERVED_USERNAMES:
             raise ValidationError("This username is reserved")
         validate_username(username)
@@ -71,7 +61,6 @@ class AuthService:
         }
 
     def login(self, username: str, password: str, ip: Optional[str] = None) -> Dict[str, Any]:
-        """Authenticate user by username and password."""
         ip_key = f"login_ip:{ip}" if ip else None
         if ip_key:
             self._check_rate_limit(
@@ -94,53 +83,4 @@ class AuthService:
             "id": user.id,
             "username": user.username,
             "confirmed": bool(getattr(user, "confirmed", False))
-        }
-
-    def update_profile(self, user_id: int, updates: Dict[str, Any]) -> Dict[str, Any]:
-        """Update user profile (bio, avatar_url)."""
-        user = self.user_repo.get_by_id(user_id)
-        if not user:
-            raise UserNotFoundError("User not found")
-
-        if 'bio' in updates:
-            user.bio = updates['bio'][:500] if updates['bio'] else None
-
-        if user.bio or user.avatar_url:
-            user.profile_completed = True
-
-        self.user_repo.session.commit()
-        return {
-            "id": user.id,
-            "username": user.username,
-            "bio": user.bio,
-            "avatar_url": user.avatar_url,
-            "profile_completed": user.profile_completed
-        }
-
-    def get_profile(self, user_id: int) -> Dict[str, Any]:
-        """Get full profile of the authenticated user."""
-        user = self.user_repo.get_by_id(user_id)
-        if not user:
-            raise UserNotFoundError("User not found")
-        return {
-            "id": user.id,
-            "username": user.username,
-            "bio": user.bio,
-            "avatar_url": user.avatar_url,
-            "profile_completed": user.profile_completed
-        }
-
-    def get_profile_by_id(self, current_user_id: int, target_user_id: int) -> Dict[str, Any]:
-        """Get public profile of another user."""
-        if current_user_id == target_user_id:
-            return self.get_profile(current_user_id)
-
-        user = self.user_repo.get_by_id(target_user_id)
-        if not user:
-            raise UserNotFoundError("User not found")
-        return {
-            "id": user.id,
-            "username": user.username,
-            "bio": user.bio or "",
-            "avatar_url": user.avatar_url or ""
         }

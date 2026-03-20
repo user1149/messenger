@@ -1,5 +1,6 @@
-from datetime import datetime
 from app.core.extensions import db
+from app.core.utils.helpers import utcnow
+
 
 class Message(db.Model):
     __tablename__ = 'message'
@@ -7,7 +8,7 @@ class Message(db.Model):
     chat_id = db.Column(db.String(50), db.ForeignKey('chat.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     text = db.Column(db.Text, nullable=False)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    timestamp = db.Column(db.DateTime, default=utcnow, nullable=False)
     is_deleted = db.Column(db.Boolean, default=False)
     edited = db.Column(db.Boolean, default=False)
     edited_at = db.Column(db.DateTime, nullable=True)

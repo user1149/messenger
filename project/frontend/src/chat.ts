@@ -318,16 +318,12 @@ export class Chat {
 
     async loadChatAvatar(chatId: string, username: string) {
         try {
-            const userResp = await fetch(`/api/users/by-username/${encodeURIComponent(username)}`);
-            if (!userResp.ok) return;
-            const userData = await userResp.json();
-            const profileResp = await fetch(`/api/users/${userData.id}/profile`);
-            if (profileResp.ok) {
-                const profile = await profileResp.json();
-                if (this.chatsData[chatId]) {
-                    this.chatsData[chatId].avatarUrl = profile.avatar_url;
-                    this.renderChatsList();
-                }
+            const resp = await fetch(`/api/users/by-username/${encodeURIComponent(username)}`);
+            if (!resp.ok) return;
+            const userData = await resp.json();
+            if (this.chatsData[chatId]) {
+                this.chatsData[chatId].avatarUrl = userData.avatar_url || undefined;
+                this.renderChatsList();
             }
         } catch (err) {
             console.error('Failed to load chat avatar', err);
@@ -339,16 +335,12 @@ export class Chat {
         if (!chat || chat.type !== 'private') return;
         const partnerName = chat.name;
         try {
-            const userResp = await fetch(`/api/users/by-username/${encodeURIComponent(partnerName)}`);
-            if (!userResp.ok) return;
-            const userData = await userResp.json();
+            const resp = await fetch(`/api/users/by-username/${encodeURIComponent(partnerName)}`);
+            if (!resp.ok) return;
+            const userData = await resp.json();
             this.currentChatPartnerId = userData.id;
-            const profileResp = await fetch(`/api/users/${userData.id}/profile`);
-            if (profileResp.ok) {
-                const profile = await profileResp.json();
-                this.updateChatHeaderAvatar(profile.avatar_url, profile.username);
-                this.makeChatHeaderAvatarClickable(userData.id);
-            }
+            this.updateChatHeaderAvatar(userData.avatar_url || undefined, userData.username);
+            this.makeChatHeaderAvatarClickable(userData.id);
         } catch (err) {
             console.error('Failed to load partner profile', err);
         }
@@ -472,11 +464,12 @@ export class Chat {
         this.chatsData = {};
         chats.forEach(c => {
             this.chatsData[c.id] = {
+                id: c.id,
                 name: c.name,
                 type: c.type,
                 lastMessage: c.lastMessage || '',
                 lastTime: c.lastTime || '',
-                avatarUrl: null
+                avatarUrl: undefined
             };
         });
         this.renderChatsList();
@@ -503,11 +496,12 @@ export class Chat {
     handleChatCreated(chat: any) {
         if (!this.chatsData[chat.id]) {
             this.chatsData[chat.id] = {
+                id: chat.id,
                 name: chat.name,
                 type: chat.type,
                 lastMessage: '',
                 lastTime: '',
-                avatarUrl: null
+                avatarUrl: undefined
             };
         }
         this.renderChatsList();
@@ -570,7 +564,7 @@ export class Chat {
             this.chatsData[msg.chat_id].lastMessage = lastMessageText;
             this.chatsData[msg.chat_id].lastTime = msg.timestamp;
         }
-        if (msg.nickname === this.app.currentUsername) {
+        if (msg.user_id === this.app.currentUserId) {
             this.unreadCounts[msg.chat_id] = 0;
         }
         if (msg.chat_id === this.currentChatId) {
@@ -580,7 +574,7 @@ export class Chat {
             if (isNearBottom) this.scrollMessagesToBottom();
             this.app.socket.emitChat('mark_read', { chat_id: this.currentChatId });
         } else {
-            if (msg.nickname !== this.app.currentUsername) {
+            if (msg.user_id !== this.app.currentUserId) {
                 this.unreadCounts[msg.chat_id] = (this.unreadCounts[msg.chat_id] || 0) + 1;
             }
         }
@@ -628,11 +622,12 @@ export class Chat {
         this.groupCreationInProgress = false;
         if (!this.chatsData[chatInfo.id]) {
             this.chatsData[chatInfo.id] = {
+                id: chatInfo.id,
                 name: chatInfo.name,
                 type: chatInfo.type,
                 lastMessage: '',
                 lastTime: '',
-                avatarUrl: null
+                avatarUrl: undefined
             };
         }
         this.renderChatsList();

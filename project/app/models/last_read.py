@@ -1,5 +1,6 @@
-from datetime import datetime
 from app.core.extensions import db
+from app.core.utils.helpers import utcnow
+
 
 class LastRead(db.Model):
     __tablename__ = 'last_read'
@@ -7,7 +8,7 @@ class LastRead(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     chat_id = db.Column(db.String(50), db.ForeignKey('chat.id'), nullable=False)
     last_message_id = db.Column(db.Integer, db.ForeignKey('message.id'), nullable=True)
-    last_read_at = db.Column(db.DateTime, default=datetime.utcnow)
+    last_read_at = db.Column(db.DateTime, default=utcnow)
 
     __table_args__ = (
         db.UniqueConstraint('user_id', 'chat_id', name='unique_user_chat'),

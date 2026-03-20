@@ -1,10 +1,10 @@
 from typing import Optional, List
-from datetime import datetime
 
 from sqlalchemy.orm import joinedload
 from sqlalchemy import func
 
 from app.core.base.repository import BaseRepository
+from app.core.utils.helpers import utcnow
 
 from app.models.message import Message
 from app.models.last_read import LastRead
@@ -75,6 +75,6 @@ class MessageRepository(BaseRepository):
             return None
         message.text = new_text
         message.edited = True
-        message.edited_at = datetime.utcnow()
+        message.edited_at = utcnow()
         self.session.flush()
         return message
