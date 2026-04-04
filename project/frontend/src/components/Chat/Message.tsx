@@ -16,6 +16,7 @@ export const Message: React.FC<MessageProps> = ({ message }) => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLDivElement>(null);
   const isOwn = message.user_id === user?.id;
 
   useEffect(() => {
@@ -25,32 +26,42 @@ export const Message: React.FC<MessageProps> = ({ message }) => {
       }
     };
     if (showMenu) {
-      document.addEventListener('click', handleClickOutside);
+      document.addEventListener('mousedown', handleClickOutside);
     }
-    return () => document.removeEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showMenu]);
 
-  const handleEdit = () => {
+  const handleEdit = (e: React.MouseEvent) => {
+    e.stopPropagation();
     setShowMenu(false);
     setShowEditModal(true);
   };
 
-  const handleDelete = () => {
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
     setShowMenu(false);
     setShowDeleteModal(true);
+  };
+
+  const toggleMenu = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowMenu(!showMenu);
   };
 
   const onEditConfirm = (newText: string) => {
     if (newText.trim() && newText !== message.text) {
       editMessage(message.id, newText.trim());
     }
+    setShowEditModal(false);
   };
 
   const onDeleteConfirm = () => {
     deleteMessage(message.id);
+    setShowDeleteModal(false);
   };
 
-  const handleOpenProfile = () => {
+  const handleOpenProfile = (e: React.MouseEvent) => {
+    e.stopPropagation();
     window.dispatchEvent(new CustomEvent('openUserProfileModal', { detail: { userId: message.user_id } }));
   };
 
@@ -58,7 +69,12 @@ export const Message: React.FC<MessageProps> = ({ message }) => {
     <>
       <div className={`message ${isOwn ? 'own' : 'other'} ${message.is_deleted ? 'deleted' : ''}`}>
         {!isOwn && (
-          <div className="avatar" data-user-id={message.user_id} onClick={handleOpenProfile}>
+          <div
+            className="avatar"
+            data-user-id={message.user_id}
+            onClick={handleOpenProfile}
+            style={{ cursor: 'pointer' }}
+          >
             {message.avatar_url ? (
               <img src={message.avatar_url} alt={message.nickname} />
             ) : (
@@ -69,7 +85,12 @@ export const Message: React.FC<MessageProps> = ({ message }) => {
         <div className="message-content">
           {!isOwn && (
             <div className="message-nickname">
-              <span className="clickable-nickname" data-user-id={message.user_id} onClick={handleOpenProfile}>
+              <span
+                className="clickable-nickname"
+                data-user-id={message.user_id}
+                onClick={handleOpenProfile}
+                style={{ cursor: 'pointer' }}
+              >
                 {escapeHtml(message.nickname)}
               </span>
             </div>
@@ -89,12 +110,25 @@ export const Message: React.FC<MessageProps> = ({ message }) => {
           </div>
         </div>
         {isOwn && !message.is_deleted && (
-          <div className="message-actions" onClick={() => setShowMenu(!showMenu)} ref={menuRef}>
+          <div
+            className="message-actions"
+            onClick={toggleMenu}
+            ref={buttonRef}
+            style={{ cursor: 'pointer', position: 'relative' }}
+          >
             ⋮
             {showMenu && (
-              <div className="message-actions-menu show">
-                <button onClick={handleEdit}>✏️ Редактировать</button>
-                <button onClick={handleDelete} className="delete-message">🗑️ Удалить</button>
+              <div
+                className="message-actions-menu show"
+                ref={menuRef}
+                style={{ position: 'absolute', right: 0, bottom: '100%', marginBottom: '4px' }}
+              >
+                <button onClick={handleEdit} style={{ cursor: 'pointer' }}>
+                  ✏️ Редактировать
+                </button>
+                <button onClick={handleDelete} className="delete-message" style={{ cursor: 'pointer' }}>
+                  🗑️ Удалить
+                </button>
               </div>
             )}
           </div>

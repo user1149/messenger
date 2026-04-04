@@ -16,15 +16,26 @@ const AppContent: React.FC = () => {
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
 
   useEffect(() => {
-    const handleOpenProfile = () => setProfileModalOpen(true);
-    const handleOpenCreateGroup = () => setCreateGroupModalOpen(true);
+    const handleOpenProfile = () => {
+      console.log('Opening profile modal');
+      setProfileModalOpen(true);
+    };
+
+    const handleOpenCreateGroup = () => {
+      console.log('Opening create group modal');
+      setCreateGroupModalOpen(true);
+    };
+
     const handleOpenUserProfile = (e: CustomEvent<{ userId: number }>) => {
+      console.log('Opening user profile modal for user:', e.detail.userId);
       setSelectedUserId(e.detail.userId);
       setUserProfileModalOpen(true);
     };
+
     window.addEventListener('openProfileModal', handleOpenProfile);
     window.addEventListener('openCreateGroupModal', handleOpenCreateGroup);
     window.addEventListener('openUserProfileModal', handleOpenUserProfile as EventListener);
+
     return () => {
       window.removeEventListener('openProfileModal', handleOpenProfile);
       window.removeEventListener('openCreateGroupModal', handleOpenCreateGroup);
@@ -44,10 +55,31 @@ const AppContent: React.FC = () => {
     <>
       <MainLayout />
       <Notification />
-      {profileModalOpen && <ProfileModal onClose={() => setProfileModalOpen(false)} />}
-      {createGroupModalOpen && <CreateGroupModal onClose={() => setCreateGroupModalOpen(false)} />}
+      {profileModalOpen && (
+        <ProfileModal
+          onClose={() => {
+            console.log('Closing profile modal');
+            setProfileModalOpen(false);
+          }}
+        />
+      )}
+      {createGroupModalOpen && (
+        <CreateGroupModal
+          onClose={() => {
+            console.log('Closing create group modal');
+            setCreateGroupModalOpen(false);
+          }}
+        />
+      )}
       {userProfileModalOpen && selectedUserId && (
-        <UserProfileModal userId={selectedUserId} onClose={() => setUserProfileModalOpen(false)} />
+        <UserProfileModal
+          userId={selectedUserId}
+          onClose={() => {
+            console.log('Closing user profile modal');
+            setUserProfileModalOpen(false);
+            setSelectedUserId(null);
+          }}
+        />
       )}
     </>
   );
