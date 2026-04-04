@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { AuthProvider } from './contexts/AuthContext';
 import { ChatProvider } from './contexts/ChatContext';
-import { MainLayout } from './components/Layout/MainLayout';
-import { AuthOverlay } from './components/Auth/AuthOverlay';
-import { Loader } from './components/Common/Loader';
-import { Notification } from './components/Common/Notification';
+import { MainLayout } from './components/Layout';
+import { AuthOverlay } from './components/Auth';
+import { Loader, Notification } from './components/Common';
 import { useAuth } from './contexts/AuthContext';
 import { ProfileModal, CreateGroupModal, UserProfileModal } from './components/Modals';
 

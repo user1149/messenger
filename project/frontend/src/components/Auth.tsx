@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../contexts/AuthContext';
 
 export const AuthOverlay: React.FC = () => {
   const { login, register } = useAuth();
@@ -52,7 +52,7 @@ export const AuthOverlay: React.FC = () => {
         : await register(usernameTrimmed, passwordTrimmed);
 
       if (!success) {
-        setError(isLoginMode ? 'Неверное имя пользователя или пароль' : 'Ошибка регистрации. Возможно, имя уже занято');
+        setError(isLoginMode ? 'Неверное имя пользователя или пароль' : 'Ошибка регистрации');
       }
     } catch (err) {
       setError('Произошла ошибка. Попробуйте позже');
@@ -102,8 +102,8 @@ export const AuthOverlay: React.FC = () => {
             />
           </div>
           {!isLoginMode && (
-            <div className="input-group" id="password-confirm-group">
-              <i className="fas fa-check-circle"></i>
+            <div className="input-group">
+              <i className="fas fa-lock"></i>
               <input
                 type="password"
                 placeholder="Подтвердите пароль"
@@ -114,13 +114,16 @@ export const AuthOverlay: React.FC = () => {
               />
             </div>
           )}
-          <button type="submit" className="btn-primary" disabled={loading}>
-            {loading ? '⏳ Подождите...' : isLoginMode ? 'Войти' : 'Зарегистрироваться'}
+          <button type="submit" disabled={loading} className="auth-button">
+            {loading ? 'Загрузка...' : isLoginMode ? 'Войти' : 'Регистрация'}
           </button>
         </form>
-        <button className="btn-link" onClick={toggleMode} disabled={loading}>
-          {isLoginMode ? 'Нет аккаунта? Зарегистрироваться' : 'Уже есть аккаунт? Войти'}
-        </button>
+        <div className="auth-footer">
+          <span>{isLoginMode ? 'Нет аккаунта? ' : 'Уже есть аккаунт? '}</span>
+          <button type="button" onClick={toggleMode} className="auth-toggle">
+            {isLoginMode ? 'Регистрация' : 'Войти'}
+          </button>
+        </div>
       </div>
     </div>
   );

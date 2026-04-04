@@ -1,20 +1,19 @@
 import React, { useRef, useEffect, useCallback, useLayoutEffect } from 'react';
-import { Message } from './Message';
-import { Message as MessageType } from '../../types';
-import { useChat } from '../../contexts/ChatContext';
+import { useChat } from '../contexts/ChatContext';
+import Message from './Message';
+import { Message as MessageType } from '../types';
 
 interface MessageListProps {
   messages: MessageType[];
 }
 
-export const MessageList: React.FC<MessageListProps> = ({ messages }) => {
+export const ChatMessageList: React.FC<MessageListProps> = ({ messages }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const { currentChatId, hasMoreHistory, loadMoreHistory, historyOffsets } = useChat();
   const loadingRef = useRef(false);
   const prevMessagesLengthRef = useRef(messages.length);
   const prevLastMessageIdRef = useRef<number | null>(null);
 
-  // Группировка сообщений по дате
   const groupMessagesByDate = () => {
     const groups: { date: string; messages: MessageType[] }[] = [];
     messages.forEach(msg => {
@@ -52,7 +51,6 @@ export const MessageList: React.FC<MessageListProps> = ({ messages }) => {
     }
   }, [handleScroll]);
 
-  // Определяем, было ли добавлено новое сообщение (в конец) или в начало (подгрузка истории)
   useLayoutEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -69,9 +67,6 @@ export const MessageList: React.FC<MessageListProps> = ({ messages }) => {
 
     if (wasNewMessageAdded) {
       container.scrollTop = container.scrollHeight;
-    } else if (newLength > prevMessagesLengthRef.current) {
-      const oldScrollHeight = container.scrollHeight;
-      // ignore
     }
 
     prevMessagesLengthRef.current = newLength;
@@ -80,14 +75,16 @@ export const MessageList: React.FC<MessageListProps> = ({ messages }) => {
 
   return (
     <div className="messages-container" ref={containerRef}>
-      {groups.map((group, idx) => (
-        <React.Fragment key={group.date}>
-          {idx > 0 && <div className="date-separator">{group.date}</div>}
+      {groups.map((group, i) => (
+        <div key={i}>
+          <div className="date-divider">{group.date}</div>
           {group.messages.map(msg => (
             <Message key={msg.id} message={msg} />
           ))}
-        </React.Fragment>
+        </div>
       ))}
     </div>
   );
 };
+
+export default ChatMessageList;

@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Sidebar } from '../Sidebar/Sidebar';
-import { ChatArea } from '../Chat/ChatArea';
-import { useChat } from '../../contexts/ChatContext';
-import { isMobile } from '../../services/utils';
+import { Sidebar } from './Sidebar';
+import { ChatArea } from './ChatArea';
+import { useChat } from '../contexts/ChatContext';
+import { isMobile } from '../services/utils';
 
 export const MainLayout: React.FC = () => {
   const { currentChatId } = useChat();

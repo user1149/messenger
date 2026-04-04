@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useChat } from '../../contexts/ChatContext';
-import { showNotification } from '../Common/Notification';
+import { useChat } from '../contexts/ChatContext';
+import { showNotification } from './Common';
 
-export const MessageInput: React.FC = () => {
+const ChatInput: React.FC = () => {
   const { currentChatId, sendMessage, socket } = useChat();
   const [text, setText] = useState('');
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout>>(null);
@@ -34,7 +34,7 @@ export const MessageInput: React.FC = () => {
     if (!currentChatId) return;
     if (!text.trim()) return;
     if (text.length > 500) {
-      showNotification('Сообщение слишком длинное (макс. 500)', true);
+      showNotification('Сообщение слишком длинное', true);
       return;
     }
     sendMessage(text);
@@ -56,7 +56,7 @@ export const MessageInput: React.FC = () => {
       <input
         ref={inputRef}
         type="text"
-        placeholder="Введите сообщение..."
+        placeholder="Сообщение..."
         value={text}
         onChange={e => setText(e.target.value)}
         onKeyPress={handleKeyPress}
@@ -69,3 +69,5 @@ export const MessageInput: React.FC = () => {
     </div>
   );
 };
+
+export default ChatInput;

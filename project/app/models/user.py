@@ -14,6 +14,7 @@ class User(UserMixin, db.Model):
     bio = db.Column(db.String(500), nullable=True)
     avatar_url = db.Column(db.String(255), nullable=True)
     profile_completed = db.Column(db.Boolean, default=False)
+    confirmed = db.Column(db.Boolean, default=False)
     last_seen = db.Column(db.DateTime, default=utcnow)  # Новое поле
 
     created_at = db.Column(db.DateTime, default=utcnow)

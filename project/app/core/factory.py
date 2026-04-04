@@ -99,6 +99,8 @@ def create_app(config_object: Optional[object] = None) -> Flask:
     app.register_blueprint(users_bp)
     app.register_blueprint(profile_bp)
 
+    register_socket_handlers(socketio, app.container)
+
     socketio.init_app(
         app,
         cors_allowed_origins=app.config["CORS_ORIGINS"],

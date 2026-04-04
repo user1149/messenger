@@ -48,6 +48,7 @@ class ValidationRules:
     GROUP_NAME_MAX_LEN = 100
     DESCRIPTION_MAX_LEN = 200
     ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+    RESERVED_USERNAMES = {'admin', 'root', 'system', 'bot', 'support'}
     RESERVED_USERNAMES = {"admin", "root", "system", "support", "test", "api", "administrator"}
 
 

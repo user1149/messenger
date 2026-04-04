@@ -13,7 +13,7 @@ def handle_errors(f: Callable) -> Callable:
             return f(*args, **kwargs)
         except Exception as e:
             from app.core.exceptions.base import AppError
-            from app.core.exceptions.auth_errors import ValidationError, RateLimitExceededError
+            from app.core.exceptions.auth_errors import ValidationError, RateLimitExceededError, InvalidCredentialsError
             from app.core.exceptions.chat_errors import (
                 ChatNotFoundError,
                 AccessDeniedError,
@@ -33,6 +33,8 @@ def handle_errors(f: Callable) -> Callable:
                 return jsonify({"error": str(e)}), 403
             elif isinstance(e, MessageEditTimeExpiredError):
                 return jsonify({"error": str(e)}), 400
+            elif isinstance(e, InvalidCredentialsError):
+                return jsonify({"error": str(e)}), 401
             elif isinstance(e, AppError):
                 return jsonify({"error": str(e)}), 400
             else:

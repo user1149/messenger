@@ -10,7 +10,7 @@ import { useAuth } from './AuthContext';
 import { Chat, Message, GroupInfo } from '../types';
 import { SocketManager, ChatEventHandlers } from '../services/SocketManager';
 import { usersAPI } from '../services/api';
-import { showNotification } from '../components/Common/Notification';
+import { showNotification } from '../components/Notification';
 
 interface ChatContextType {
   chats: Record<string, Chat>;

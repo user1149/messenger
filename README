@@ -11,7 +11,7 @@ Tech Stack
 Backend:  Flask, Flask-SocketIO, Flask-Login, Flask-WTF, SQLAlchemy, Marshmallow
 Database: SQLite (development), PostgreSQL (production)
 Cache & real-time: Redis (session store, rate limiting, presence, message queue)
-Frontend: TypeScript compiled via Webpack, served as static files
+
 
 Getting Started
 ---------------
@@ -39,19 +39,13 @@ Installation
    cp .env.example .env
    Edit .env if needed (see Configuration below).
 
-5. Build the frontend
-   cd frontend
-   npm install
-   npm run build
-   cd ..
-
-6. Start Redis server (if not already running)
+5. Start Redis server (if not already running)
    - Using Docker:
      docker run --name redis -p 6379:6379 -d redis
    - Using local installation:
      redis-server
 
-7. Run the application
+6. Run the application
    python run.py
 
    Optional flags:
