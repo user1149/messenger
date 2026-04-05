@@ -1,3 +1,5 @@
+[![Russian](https://img.shields.io/badge/Русский-README-blue)](README.ru.md)
+
 Messenger App
 =============
 
